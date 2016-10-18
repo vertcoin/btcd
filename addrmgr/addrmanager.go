@@ -1073,7 +1073,7 @@ func (a *AddrManager) GetBestLocalAddress(remoteAddr *wire.NetAddress) *wire.Net
 		// Send something unroutable if nothing suitable.
 		bestAddress = &wire.NetAddress{
 			Timestamp: time.Now(),
-			Services:  wire.SFNodeNetwork,
+			Services:  wire.SFNodeNetwork | wire.SFNodeWitness | wire.SFNodeBloom,
 			Port:      0,
 		}
 		if !IsIPv4(remoteAddr) && !IsOnionCatTor(remoteAddr) {
