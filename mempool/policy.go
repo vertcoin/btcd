@@ -14,14 +14,13 @@ import (
 )
 
 const (
-	// maxStandardP2SHSigOps is the maximum number of signature operations
-	// that are considered standard in a pay-to-script-hash script.
-	maxStandardP2SHSigOps = 15
+	// maxStandardTxCost is the max weight permitted by any transaction
+	// according to the current default policy.
+	maxStandardTxWeight = 400000
 
-	// maxStandardTxSize is the maximum size allowed for transactions that
-	// are considered standard and will therefore be relayed and considered
-	// for mining.
-	maxStandardTxSize = 100000
+	// maxStandardSigOpsCost is the max sig op cost any transaction is
+	// permitted to have according to the current default policy.
+	maxStandardSigOpsCost = blockchain.MaxBlockSigOpsCost / 4
 
 	// maxStandardSigScriptSize is the maximum size allowed for a
 	// transaction input signature script to be considered standard.  This
@@ -104,19 +103,19 @@ func CalcPriority(tx *wire.MsgTx, utxoView *blockchain.UtxoViewpoint, nextBlockH
 	// <33 byte compresed pubkey> + OP_CHECKSIG}]
 	//
 	// Thus 1 + 73 + 1 + 1 + 33 + 1 = 110
-	overhead := 0
+	overhead := int64(0)
 	for _, txIn := range tx.TxIn {
 		// Max inputs + size can't possibly overflow here.
-		overhead += 41 + minInt(110, len(txIn.SignatureScript))
+		overhead += 41 + int64(minInt(110, len(txIn.SignatureScript)))
 	}
 
-	serializedTxSize := tx.SerializeSize()
-	if overhead >= serializedTxSize {
+	virtualSize := blockchain.GetTxVirtualSize(btcutil.NewTx(tx))
+	if overhead >= virtualSize {
 		return 0.0
 	}
 
 	inputValueAge := calcInputValueAge(tx, utxoView, nextBlockHeight)
-	return inputValueAge / float64(serializedTxSize-overhead)
+	return inputValueAge / float64(virtualSize-overhead)
 }
 
 // calcInputValueAge is a helper function used to calculate the input age of
@@ -178,17 +177,6 @@ func checkInputsStandard(tx *btcutil.Tx, utxoView *blockchain.UtxoViewpoint) err
 		entry := utxoView.LookupEntry(&prevOut.Hash)
 		originPkScript := entry.PkScriptByIndex(prevOut.Index)
 		switch txscript.GetScriptClass(originPkScript) {
-		case txscript.ScriptHashTy:
-			numSigOps := txscript.GetPreciseSigOpCount(
-				txIn.SignatureScript, originPkScript, true)
-			if numSigOps > maxStandardP2SHSigOps {
-				str := fmt.Sprintf("transaction input #%d has "+
-					"%d signature operations which is more "+
-					"than the allowed max amount of %d",
-					i, numSigOps, maxStandardP2SHSigOps)
-				return txRuleError(wire.RejectNonstandard, str)
-			}
-
 		case txscript.NonStandardTy:
 			str := fmt.Sprintf("transaction input #%d has a "+
 				"non-standard script form", i)
@@ -301,8 +289,15 @@ func isDust(txOut *wire.TxOut, minRelayTxFee btcutil.Amount) bool {
 	//
 	// The most common scripts are pay-to-pubkey-hash, and as per the above
 	// breakdown, the minimum size of a p2pkh input script is 148 bytes.  So
-	// that figure is used.
-	totalSize := txOut.SerializeSize() + 148
+	// that figure is used. If the output being spent is a witness program,
+	// then we apply the witness discount to the size of the signature.
+	var totalSize int
+	if txscript.IsWitnessProgram(txOut.PkScript) {
+		witnessSig := (32 + 4 + 1 + (107 / blockchain.WitnessScaleFactor) + 4)
+		totalSize = txOut.SerializeSize() + witnessSig
+	} else {
+		totalSize = txOut.SerializeSize() + 148
+	}
 
 	// The output is considered dust if the cost to the network to spend the
 	// coins is more than 1/3 of the minimum free transaction relay fee.
@@ -326,7 +321,9 @@ func isDust(txOut *wire.TxOut, minRelayTxFee btcutil.Amount) bool {
 // finalized, conforming to more stringent size constraints, having scripts
 // of recognized forms, and not containing "dust" outputs (those that are
 // so small it costs more to process them than they are worth).
-func checkTransactionStandard(tx *btcutil.Tx, height int32, timeSource blockchain.MedianTimeSource, minRelayTxFee btcutil.Amount) error {
+func checkTransactionStandard(tx *btcutil.Tx, height int32,
+	timeSource blockchain.MedianTimeSource, minRelayTxFee btcutil.Amount) error {
+
 	// The transaction must be a currently supported version.
 	msgTx := tx.MsgTx()
 	if msgTx.Version > wire.TxVersion || msgTx.Version < 1 {
@@ -348,10 +345,10 @@ func checkTransactionStandard(tx *btcutil.Tx, height int32, timeSource blockchai
 	// almost as much to process as the sender fees, limit the maximum
 	// size of a transaction.  This also helps mitigate CPU exhaustion
 	// attacks.
-	serializedLen := msgTx.SerializeSize()
-	if serializedLen > maxStandardTxSize {
-		str := fmt.Sprintf("transaction size of %v is larger than max "+
-			"allowed size of %v", serializedLen, maxStandardTxSize)
+	txWeight := blockchain.GetTransactionWeight(tx)
+	if txWeight > maxStandardTxWeight {
+		str := fmt.Sprintf("weight of transaction %v is larger than max "+
+			"allowed weight of %v", txWeight, maxStandardTxWeight)
 		return txRuleError(wire.RejectNonstandard, str)
 	}
 
