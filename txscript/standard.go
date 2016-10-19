@@ -33,6 +33,7 @@ const (
 		ScriptVerifyCleanStack |
 		ScriptVerifyCheckLockTimeVerify |
 		ScriptVerifyLowS |
+		ScriptStrictMultiSig |
 		ScriptVerifyWitness |
 		ScriptVerifyDiscourageUpgradeableWitnessProgram
 )
