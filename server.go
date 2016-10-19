@@ -184,6 +184,7 @@ type server struct {
 	chainParams          *chaincfg.Params
 	addrManager          *addrmgr.AddrManager
 	sigCache             *txscript.SigCache
+	hashCache            *txscript.HashCache
 	rpcServer            *rpcServer
 	blockManager         *blockManager
 	txMemPool            *mempool.TxPool
@@ -2514,6 +2515,7 @@ func newServer(listenAddrs []string, db database.DB, chainParams *chaincfg.Param
 		timeSource:           blockchain.NewMedianTime(),
 		services:             services,
 		sigCache:             txscript.NewSigCache(cfg.SigCacheMaxSize),
+		hashCache:            txscript.NewHashCache(cfg.SigCacheMaxSize),
 	}
 
 	// Create the transaction and address indexes if needed.
@@ -2561,13 +2563,14 @@ func newServer(listenAddrs []string, db database.DB, chainParams *chaincfg.Param
 			FreeTxRelayLimit:     cfg.FreeTxRelayLimit,
 			MaxOrphanTxs:         cfg.MaxOrphanTxs,
 			MaxOrphanTxSize:      defaultMaxOrphanTxSize,
-			MaxSigOpsPerTx:       blockchain.MaxSigOpsPerBlock / 5,
+			MaxSigOpCostPerTx:    blockchain.MaxBlockSigOpsCost / 4,
 			MinRelayTxFee:        cfg.minRelayTxFee,
 		},
 		ChainParams:   chainParams,
 		FetchUtxoView: s.blockManager.chain.FetchUtxoView,
 		BestHeight:    func() int32 { return bm.chain.BestSnapshot().Height },
 		SigCache:      s.sigCache,
+		HashCache:     s.hashCache,
 		TimeSource:    s.timeSource,
 		AddrIndex:     s.addrIndex,
 	}
@@ -2577,6 +2580,8 @@ func newServer(listenAddrs []string, db database.DB, chainParams *chaincfg.Param
 	// NOTE: The CPU miner relies on the mempool, so the mempool has to be
 	// created before calling the function to create the CPU miner.
 	policy := mining.Policy{
+		BlockMinWeight:    cfg.BlockMinWeight,
+		BlockMaxWeight:    cfg.BlockMaxWeight,
 		BlockMinSize:      cfg.BlockMinSize,
 		BlockMaxSize:      cfg.BlockMaxSize,
 		BlockPrioritySize: cfg.BlockPrioritySize,
