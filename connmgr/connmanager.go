@@ -8,6 +8,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"strconv"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -57,7 +58,7 @@ type ConnReq struct {
 	// The following variables must only be used atomically.
 	id uint64
 
-	Addr      string
+	Addr      net.Addr
 	Permanent bool
 
 	conn       net.Conn
@@ -88,7 +89,7 @@ func (c *ConnReq) State() ConnState {
 
 // String returns a human-readable string for the connection request.
 func (c *ConnReq) String() string {
-	if c.Addr == "" {
+	if c.Addr.String() == "" {
 		return fmt.Sprintf("reqid %d", atomic.LoadUint64(&c.id))
 	}
 	return fmt.Sprintf("%s (reqid %d)", c.Addr, atomic.LoadUint64(&c.id))
@@ -140,7 +141,10 @@ type Config struct {
 	GetNewAddress func() (string, error)
 
 	// Dial connects to the address on the named network. It cannot be nil.
-	Dial func(string, string) (net.Conn, error)
+	Dial func(net.Addr) (net.Conn, error)
+
+	// Lookup attempts to lookup the passed host via DNS. It cannot be nil.
+	Lookup func(string) ([]net.IP, error)
 }
 
 // handleConnected is used to queue a successful connection.
@@ -288,7 +292,30 @@ func (cm *ConnManager) NewConnReq() {
 		cm.requests <- handleFailed{c, err}
 		return
 	}
-	c.Addr = addr
+
+	host, strPort, err := net.SplitHostPort(addr)
+	if err != nil {
+		cm.requests <- handleFailed{c, err}
+		return
+	}
+
+	ips, err := cm.cfg.Lookup(host)
+	if err != nil {
+		cm.requests <- handleFailed{c, err}
+		return
+	}
+
+	port, err := strconv.Atoi(strPort)
+	if err != nil {
+		cm.requests <- handleFailed{c, err}
+		return
+	}
+
+	c.Addr = &net.TCPAddr{
+		IP:   ips[0],
+		Port: port,
+	}
+
 	cm.Connect(c)
 }
 
@@ -302,7 +329,7 @@ func (cm *ConnManager) Connect(c *ConnReq) {
 		atomic.StoreUint64(&c.id, atomic.AddUint64(&cm.connReqCount, 1))
 	}
 	log.Debugf("Attempting to connect to %v", c)
-	conn, err := cm.cfg.Dial("tcp", c.Addr)
+	conn, err := cm.cfg.Dial(c.Addr)
 	if err != nil {
 		cm.requests <- handleFailed{c, err}
 	} else {

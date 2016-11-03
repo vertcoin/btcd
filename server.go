@@ -1456,9 +1456,32 @@ func (s *server) handleQuery(state *peerState, querymsg interface{}) {
 			}
 		}
 
+		host, strPort, err := net.SplitHostPort(msg.addr)
+		if err != nil {
+			msg.reply <- err
+			return
+		}
+
+		ips, err := btcdLookup(host)
+		if err != nil {
+			msg.reply <- err
+			return
+		}
+
+		port, err := strconv.Atoi(strPort)
+		if err != nil {
+			msg.reply <- err
+			return
+		}
+
+		netAddr := &net.TCPAddr{
+			IP:   ips[0],
+			Port: port,
+		}
+
 		// TODO(oga) if too many, nuke a non-perm peer.
 		go s.connManager.Connect(&connmgr.ConnReq{
-			Addr:      msg.addr,
+			Addr:      netAddr,
 			Permanent: msg.permanent,
 		})
 		msg.reply <- nil
@@ -1603,7 +1626,7 @@ func (s *server) inboundPeerConnected(conn net.Conn) {
 // manager of the attempt.
 func (s *server) outboundPeerConnected(c *connmgr.ConnReq, conn net.Conn) {
 	sp := newServerPeer(s, c.Permanent)
-	p, err := peer.NewOutboundPeer(newPeerConfig(sp), c.Addr)
+	p, err := peer.NewOutboundPeer(newPeerConfig(sp), c.Addr.String())
 	if err != nil {
 		srvrLog.Debugf("Cannot create outbound peer %s: %v", c.Addr, err)
 		s.connManager.Disconnect(c.ID())
@@ -2449,6 +2472,7 @@ func newServer(listenAddrs []string, db database.DB, chainParams *chaincfg.Param
 		RetryDuration:  connectionRetryInterval,
 		TargetOutbound: uint32(targetOutbound),
 		Dial:           btcdDial,
+		Lookup:         btcdLookup,
 		OnConnection:   s.outboundPeerConnected,
 		GetNewAddress:  newAddressFunc,
 	})
@@ -2463,7 +2487,30 @@ func newServer(listenAddrs []string, db database.DB, chainParams *chaincfg.Param
 		permanentPeers = cfg.AddPeers
 	}
 	for _, addr := range permanentPeers {
-		go s.connManager.Connect(&connmgr.ConnReq{Addr: addr, Permanent: true})
+		host, strPort, err := net.SplitHostPort(addr)
+		if err != nil {
+			return nil, err
+		}
+
+		ips, err := btcdLookup(host)
+		if err != nil {
+			return nil, err
+		}
+
+		port, err := strconv.Atoi(strPort)
+		if err != nil {
+			return nil, err
+		}
+
+		tcpAddr := &net.TCPAddr{
+			IP:   ips[0],
+			Port: port,
+		}
+
+		go s.connManager.Connect(&connmgr.ConnReq{
+			Addr:      tcpAddr,
+			Permanent: true,
+		})
 	}
 
 	if !cfg.DisableRPC {
