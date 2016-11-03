@@ -494,6 +494,22 @@ func (g *BlkTmplGenerator) NewBlockTemplate(payToAddress btcutil.Address) (*Bloc
 	log.Debugf("Considering %d transactions for inclusion to new block",
 		len(sourceTxns))
 
+	// Obtain the latest BIP9 version bits state for the CSV-package
+	// soft-fork deployment. The adherence of sequence locks, MTP based
+	// lock-time, and CSV depends on the current soft-fork state.
+	csvState, err := g.chain.ThresholdState(chaincfg.DeploymentCSV)
+	if err != nil {
+		return nil, err
+	}
+
+	// Once the CSV soft-fork is fully active, we'll switch to using the
+	// current median time past of the past block's timestamps for all
+	// lock-time based checks.
+	blockTime := g.timeSource.AdjustedTime()
+	if csvState == blockchain.ThresholdActive {
+		blockTime = g.chain.BestSnapshot().MedianTime
+	}
+
 mempoolLoop:
 	for _, txDesc := range sourceTxns {
 		// A block can't have more than one coinbase or contain
@@ -504,7 +520,7 @@ mempoolLoop:
 			continue
 		}
 		if !blockchain.IsFinalizedTransaction(tx, nextBlockHeight,
-			g.timeSource.AdjustedTime()) {
+			blockTime) {
 
 			log.Tracef("Skipping non-finalized tx %s", tx.Hash())
 			continue
@@ -683,6 +699,27 @@ mempoolLoop:
 				prioItem.priority < MinHighPriority {
 
 				heap.Push(priorityQueue, prioItem)
+				continue
+			}
+		}
+
+		if csvState == blockchain.ThresholdActive {
+			// A transaction can only be included within a block
+			// once the relative lock-time (if any) of all its
+			// inputs has been met.  Intuitively, a transaction can
+			// be included once the input with the farthest away
+			// relative-lock time amongst all inputs has been met.
+			sequenceLock, err := g.chain.CalcSequenceLock(tx,
+				blockUtxos, false)
+			if err != nil {
+				log.Tracef("Skipping transaction unable to "+
+					"calculate sequence locks: %v", tx.Hash())
+				continue
+			}
+			if !blockchain.SequenceLockActive(sequenceLock,
+				nextBlockHeight, blockTime) {
+				log.Tracef("Skipping transaction with "+
+					"inactive sequence locks: %v", tx.Hash())
 				continue
 			}
 		}
