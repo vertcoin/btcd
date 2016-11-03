@@ -144,6 +144,7 @@ var rpcHandlersBeforeInit = map[string]commandHandler{
 	"getbestblock":          handleGetBestBlock,
 	"getbestblockhash":      handleGetBestBlockHash,
 	"getblock":              handleGetBlock,
+	"getblockchaininfo":     handleGetBlockchainInfo,
 	"getblockcount":         handleGetBlockCount,
 	"getblockhash":          handleGetBlockHash,
 	"getblockheader":        handleGetBlockHeader,
@@ -226,14 +227,13 @@ var rpcAskWallet = map[string]struct{}{
 
 // Commands that are currently unimplemented, but should ultimately be.
 var rpcUnimplemented = map[string]struct{}{
-	"estimatefee":       {},
-	"estimatepriority":  {},
-	"getblockchaininfo": {},
-	"getchaintips":      {},
-	"getnetworkinfo":    {},
-	"invalidateblock":   {},
-	"preciousblock":     {},
-	"reconsiderblock":   {},
+	"estimatefee":      {},
+	"estimatepriority": {},
+	"getchaintips":     {},
+	"getnetworkinfo":   {},
+	"invalidateblock":  {},
+	"preciousblock":    {},
+	"reconsiderblock":  {},
 }
 
 // Commands that are available to a limited user
@@ -1118,6 +1118,101 @@ func handleGetBlock(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (i
 	}
 
 	return blockReply, nil
+}
+
+// handleGetBlockchainInfo implements the getblockchaininfo command.
+func handleGetBlockchainInfo(s *rpcServer, cmd interface{}, closeChan <-chan struct{}) (interface{}, error) {
+
+	// Obtain a snapshot of the current best known blockchain state. We'll
+	// populate the response to this call primarily from this snapshot.
+	chainSnapshot := s.chain.BestSnapshot()
+
+	chainInfo := &btcjson.GetBlockChainInfoResult{
+		Chain:         activeNetParams.Name,
+		Blocks:        chainSnapshot.Height,
+		Headers:       chainSnapshot.Height,
+		BestBlockHash: chainSnapshot.Hash.String(),
+		Difficulty:    getDifficultyRatio(chainSnapshot.Bits),
+		MedianTime:    chainSnapshot.MedianTime.Unix(),
+		Pruned:        false,
+		Bip9SoftForks: make(map[string]*btcjson.Bip9SoftForkDescription),
+	}
+
+	// Next, populate the response with information describing the current
+	// status of soft-forks deployed via the super-majority block
+	// signalling mechanism.
+	height := chainSnapshot.Height
+	chainInfo.Softforks = []*btcjson.SoftForkDescription{
+		&btcjson.SoftForkDescription{
+			ID:      "bip34",
+			Version: 2,
+			Reject: struct {
+				Status bool `json:"status"`
+			}{
+				Status: height >= activeNetParams.BIP0034Height,
+			},
+		},
+		&btcjson.SoftForkDescription{
+			ID:      "bip66",
+			Version: 3,
+			Reject: struct {
+				Status bool `json:"status"`
+			}{
+				Status: height >= activeNetParams.BIP0066Height,
+			},
+		},
+		&btcjson.SoftForkDescription{
+			ID:      "bip65",
+			Version: 4,
+			Reject: struct {
+				Status bool `json:"status"`
+			}{
+				Status: height >= activeNetParams.BIP0065Height,
+			},
+		},
+	}
+
+	// Finally, query the BIP0009 verion bits state fo all currently
+	// defined BIP0009 soft-fork deployments.
+	for deployment, depolymentDetails := range activeNetParams.Deployments {
+		// Ignore the dummy deployment as it's only used for testing
+		// purposes.
+		if deployment == chaincfg.DeploymentTestDummy {
+			continue
+		}
+
+		// Map the integer deployment ID into a human readable
+		// fork-name.
+		var forkName string
+		switch deployment {
+		case chaincfg.DeploymentCSV:
+			forkName = "csv"
+		}
+
+		// Query the chain for the current status of the deployment as
+		// identified by its deployment ID.
+		deploymentStatus, err := s.chain.ThresholdState(uint32(deployment))
+		if err != nil {
+			return nil, err
+		}
+
+		// The string method for deployment status has a "Threshold"
+		// prefix for all the states, so we trim off this section in
+		// order to display it properly.
+		statusString := strings.TrimPrefix(deploymentStatus.String(),
+			"Threshold")
+
+		// Finally, populate the soft-fork description with all the
+		// information gathered above.
+		chainInfo.Bip9SoftForks[forkName] = &btcjson.Bip9SoftForkDescription{
+			Status:    strings.ToLower(statusString),
+			Bit:       depolymentDetails.BitNumber,
+			StartTime: int64(depolymentDetails.StartTime),
+			Timeout:   int64(depolymentDetails.ExpireTime),
+		}
+	}
+
+	return chainInfo, nil
 }
 
 // handleGetBlockCount implements the getblockcount command.
