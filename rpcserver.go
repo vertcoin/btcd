@@ -1143,7 +1143,7 @@ func handleGetBlockchainInfo(s *rpcServer, cmd interface{}, closeChan <-chan str
 	// signalling mechanism.
 	height := chainSnapshot.Height
 	chainInfo.Softforks = []*btcjson.SoftForkDescription{
-		&btcjson.SoftForkDescription{
+		{
 			ID:      "bip34",
 			Version: 2,
 			Reject: struct {
@@ -1152,7 +1152,7 @@ func handleGetBlockchainInfo(s *rpcServer, cmd interface{}, closeChan <-chan str
 				Status: height >= activeNetParams.BIP0034Height,
 			},
 		},
-		&btcjson.SoftForkDescription{
+		{
 			ID:      "bip66",
 			Version: 3,
 			Reject: struct {
@@ -1161,7 +1161,7 @@ func handleGetBlockchainInfo(s *rpcServer, cmd interface{}, closeChan <-chan str
 				Status: height >= activeNetParams.BIP0066Height,
 			},
 		},
-		&btcjson.SoftForkDescription{
+		{
 			ID:      "bip65",
 			Version: 4,
 			Reject: struct {
