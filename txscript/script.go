@@ -63,7 +63,7 @@ func isScriptHash(pops []parsedOpcode) bool {
 // IsPayToScriptHash returns true if the script is in the standard
 // pay-to-script-hash (P2SH) format, false otherwise.
 func IsPayToScriptHash(script []byte) bool {
-	pops, err := parseScript(script)
+	pops, err := ParseScript(script)
 	if err != nil {
 		return false
 	}
@@ -81,7 +81,7 @@ func isWitnessScriptHash(pops []parsedOpcode) bool {
 // IsPayToWitnessScriptHash returns true if the is in the standard
 // pay-to-witness-script-hash (P2WSH) format, false otherwise.
 func IsPayToWitnessScriptHash(script []byte) bool {
-	pops, err := parseScript(script)
+	pops, err := ParseScript(script)
 	if err != nil {
 		return false
 	}
@@ -91,7 +91,7 @@ func IsPayToWitnessScriptHash(script []byte) bool {
 // IsPayToWitnessPubKeyHash returns true if the is in the standard
 // pay-to-witness-pubkey-hash (P2WKH) format, false otherwise.
 func IsPayToWitnessPubKeyHash(script []byte) bool {
-	pops, err := parseScript(script)
+	pops, err := ParseScript(script)
 	if err != nil {
 		return false
 	}
@@ -117,7 +117,7 @@ func IsWitnessProgram(script []byte) bool {
 		return false
 	}
 
-	pops, err := parseScript(script)
+	pops, err := ParseScript(script)
 	if err != nil {
 		return false
 	}
@@ -140,7 +140,7 @@ func ExtractWitnessProgramInfo(script []byte) (int, []byte, error) {
 	var witnessVersion int
 	var witnessProgram []byte
 
-	pops, err := parseScript(script)
+	pops, err := ParseScript(script)
 	if err != nil {
 		return witnessVersion, witnessProgram, err
 	}
@@ -173,7 +173,7 @@ func isPushOnly(pops []parsedOpcode) bool {
 //
 // False will be returned when the script does not parse.
 func IsPushOnlyScript(script []byte) bool {
-	pops, err := parseScript(script)
+	pops, err := ParseScript(script)
 	if err != nil {
 		return false
 	}
@@ -256,7 +256,7 @@ func parseScriptTemplate(script []byte, opcodes *[256]opcode) ([]parsedOpcode, e
 
 // parseScript preparses the script in bytes into a list of parsedOpcodes while
 // applying a number of sanity checks.
-func parseScript(script []byte) ([]parsedOpcode, error) {
+func ParseScript(script []byte) ([]parsedOpcode, error) {
 	return parseScriptTemplate(script, &opcodeArray)
 }
 
@@ -281,7 +281,7 @@ func unparseScript(pops []parsedOpcode) ([]byte, error) {
 // if the caller wants more information about the failure.
 func DisasmString(buf []byte) (string, error) {
 	var disbuf bytes.Buffer
-	opcodes, err := parseScript(buf)
+	opcodes, err := ParseScript(buf)
 	for _, pop := range opcodes {
 		disbuf.WriteString(pop.print(true))
 		disbuf.WriteByte(' ')
@@ -411,7 +411,7 @@ func calcHashOutputs(tx *wire.MsgTx) chainhash.Hash {
 // being spent, in addition to the final transaction fee. In the case the
 // wallet if fed an invalid input amount, the real sighash will differ causing
 // the produced signature to be invalid.
-func calcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
+func CalcWitnessSignatureHash(subScript []parsedOpcode, sigHashes *TxSigHashes,
 	hashType SigHashType, tx *wire.MsgTx, idx int, amt int64) []byte {
 
 	// As a sanity check, ensure the passed input index for the transaction
@@ -664,7 +664,7 @@ func getSigOpCount(pops []parsedOpcode, precise bool) int {
 func GetSigOpCount(script []byte) int {
 	// Don't check error since parseScript returns the parsed-up-to-error
 	// list of pops.
-	pops, _ := parseScript(script)
+	pops, _ := ParseScript(script)
 	return getSigOpCount(pops, false)
 }
 
@@ -676,7 +676,7 @@ func GetSigOpCount(script []byte) int {
 func GetPreciseSigOpCount(scriptSig, scriptPubKey []byte, bip16 bool) int {
 	// Don't check error since parseScript returns the parsed-up-to-error
 	// list of pops.
-	pops, _ := parseScript(scriptPubKey)
+	pops, _ := ParseScript(scriptPubKey)
 
 	// Treat non P2SH transactions as normal.
 	if !(bip16 && isScriptHash(pops)) {
@@ -686,7 +686,7 @@ func GetPreciseSigOpCount(scriptSig, scriptPubKey []byte, bip16 bool) int {
 	// The public key script is a pay-to-script-hash, so parse the signature
 	// script to get the final item.  Scripts that fail to fully parse count
 	// as 0 signature operations.
-	sigPops, err := parseScript(scriptSig)
+	sigPops, err := ParseScript(scriptSig)
 	if err != nil {
 		return 0
 	}
@@ -709,7 +709,7 @@ func GetPreciseSigOpCount(scriptSig, scriptPubKey []byte, bip16 bool) int {
 	// returns the parsed-up-to-error list of pops and the consensus rules
 	// dictate signature operations are counted up to the first parse
 	// failure.
-	shPops, _ := parseScript(shScript)
+	shPops, _ := ParseScript(shScript)
 	return getSigOpCount(shPops, true)
 }
 
@@ -729,7 +729,7 @@ func GetWitnessSigOpCount(sigScript, pkScript []byte, witness wire.TxWitness) in
 	// Next, we'll check the sigScript to see if this is a nested p2sh
 	// witness program. This is a case wherein the sigScript is actually a
 	// datapush of a p2wsh witness program.
-	sigPops, err := parseScript(sigScript)
+	sigPops, err := ParseScript(sigScript)
 	if err != nil {
 		return 0
 	}
@@ -761,7 +761,7 @@ func getWitnessSigOps(witnessProgram []byte, witness [][]byte) int {
 			return 1
 		case len(witnessProgram) == 34 && len(witness) > 0:
 			pkScript := witness[len(witness)-1]
-			pops, err := parseScript(pkScript)
+			pops, err := ParseScript(pkScript)
 			if err != nil {
 				return 0
 			}
@@ -777,7 +777,7 @@ func getWitnessSigOps(witnessProgram []byte, witness [][]byte) int {
 // guaranteed to fail at execution.  This allows inputs to be pruned instantly
 // when entering the UTXO set.
 func IsUnspendable(pkScript []byte) bool {
-	pops, err := parseScript(pkScript)
+	pops, err := ParseScript(pkScript)
 	if err != nil {
 		return true
 	}

@@ -30,7 +30,7 @@ var TstHasCanonicalPushes = canonicalPush
 
 // TstParseScript makes the internal parseScript function available to the
 // test package.
-var TstParseScript = parseScript
+var TstParseScript = ParseScript
 
 // TstCalcSignatureHash makes the internal calcSignatureHash function available
 // to the test package.
@@ -68,7 +68,7 @@ func TstCheckSignatureEncoding(sig []byte, flags ScriptFlags) error {
 // TstRemoveOpcode makes the internal removeOpcode function available to the
 // test package.
 func TstRemoveOpcode(pkscript []byte, opcode byte) ([]byte, error) {
-	pops, err := parseScript(pkscript)
+	pops, err := ParseScript(pkscript)
 	if err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func TstRemoveOpcode(pkscript []byte, opcode byte) ([]byte, error) {
 // TstRemoveOpcodeByData makes the internal removeOpcodeByData function
 // available to the test package.
 func TstRemoveOpcodeByData(pkscript []byte, data []byte) ([]byte, error) {
-	pops, err := parseScript(pkscript)
+	pops, err := ParseScript(pkscript)
 	if err != nil {
 		return nil, err
 	}
@@ -3796,14 +3796,14 @@ func TestWitnessSigHash(t *testing.T) {
 	if err != nil {
 		t.Fatalf("unable to decode script")
 	}
-	opCodes, err := parseScript(decodedScript)
+	opCodes, err := ParseScript(decodedScript)
 	if err != nil {
 		t.Fatalf("unable to decode script: %v", err)
 	}
 
 	// Finally, calculate the sigHash. This should exactly match the
 	// sigHash as shown at the end of the example.
-	sigHash := calcWitnessSignatureHash(opCodes, txSigHashes, shType, tx, idx, int64(amt))
+	sigHash := CalcWitnessSignatureHash(opCodes, txSigHashes, shType, tx, idx, int64(amt))
 	expectedHash := "c37af31116d1b27caf68aae9e3ac82f1477929014d5b917657d0eb49478cb670"
 	if hex.EncodeToString(sigHash) != expectedHash {
 		t.Fatalf("sig hashes don't match, expected %v, got %v",

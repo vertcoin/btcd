@@ -1926,7 +1926,7 @@ func opcodeCheckSig(op *parsedOpcode, vm *Engine) error {
 			sigHashes = NewTxSigHashes(&vm.tx)
 		}
 
-		hash = calcWitnessSignatureHash(subScript, sigHashes, hashType,
+		hash = CalcWitnessSignatureHash(subScript, sigHashes, hashType,
 			&vm.tx, vm.txIdx, vm.inputAmount)
 	} else {
 		hash = calcSignatureHash(subScript, hashType, &vm.tx, vm.txIdx)
@@ -2177,7 +2177,7 @@ func opcodeCheckMultiSig(op *parsedOpcode, vm *Engine) error {
 				sigHashes = NewTxSigHashes(&vm.tx)
 			}
 
-			hash = calcWitnessSignatureHash(script, sigHashes, hashType,
+			hash = CalcWitnessSignatureHash(script, sigHashes, hashType,
 				&vm.tx, vm.txIdx, vm.inputAmount)
 		} else {
 			hash = calcSignatureHash(script, hashType, &vm.tx, vm.txIdx)
