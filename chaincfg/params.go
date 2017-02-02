@@ -33,6 +33,8 @@ var (
 	// 2^224 - 1.
 	testNet3PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 224), bigOne)
 
+	bc2NetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 231), bigOne)
+
 	// simNetPowLimit is the highest proof of work value a Bitcoin block
 	// can have for the simulation test network.  It is the value 2^255 - 1.
 	simNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
@@ -287,17 +289,17 @@ var RegressionNetParams = Params{
 
 // BC2NetParams are the parameters for the BC2 test network.
 var BC2NetParams = Params{
-	Name:        "testnet3",
+	Name:        "bc2",
 	Net:         wire.BC2Net,
 	DefaultPort: "8444",
 	DNSSeeds:    []string{},
 
 	// Chain parameters
-	GenesisBlock:             &testNet3GenesisBlock,
-	GenesisHash:              &testNet3GenesisHash,
-	PowLimit:                 testNet3PowLimit,
-	PowLimitBits:             0x1d00ffff,
-	CoinbaseMaturity:         100,
+	GenesisBlock:             &bc2GenesisBlock,
+	GenesisHash:              &bc2GenesisHash,
+	PowLimit:                 bc2NetPowLimit,
+	PowLimitBits:             0x1d7fffff,
+	CoinbaseMaturity:         10,
 	SubsidyReductionInterval: 210000,
 	TargetTimespan:           time.Hour * 1,   // 1 hour
 	TargetTimePerBlock:       time.Minute * 1, // 1 minute
@@ -323,11 +325,11 @@ var BC2NetParams = Params{
 	RelayNonStdTxs: true,
 
 	// Address encoding magics
-	PubKeyHashAddrID:        0x6f, // starts with m or n
-	ScriptHashAddrID:        0xc4, // starts with 2
+	PubKeyHashAddrID:        0x19, // starts with b
+	ScriptHashAddrID:        0x1c, // starts with ?
 	WitnessPubKeyHashAddrID: 0x77, // starts with H5
 	WitnessScriptHashAddrID: 0x79, // starts with ?
-	PrivateKeyID:            0xef, // starts with 9 (uncompressed) or c (compressed)
+	PrivateKeyID:            0xef, // starts with 9 7(uncompressed) or c (compressed)
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv

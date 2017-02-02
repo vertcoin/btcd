@@ -143,6 +143,30 @@ var testNet3GenesisBlock = wire.MsgBlock{
 	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
 }
 
+// bc2GenesisHash is the hash of the first block in the block chain for the
+// test network (version 3).
+var bc2GenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
+	0x71, 0xed, 0xa3, 0xc2, 0xe3, 0x36, 0x73, 0x3d, 0x45, 0x3, 0x88, 0x90,
+	0xd8, 0xae, 0x54, 0x11, 0x87, 0x92, 0x1c, 0x49, 0xb8, 0x7f, 0x41, 0xd6,
+	0x99, 0xf6, 0xf3, 0xae, 0xa, 0x0, 0x0, 0x0,
+})
+
+// bc2GenesisMerkleRoot is the same on bc2
+var bc2GenesisMerkleRoot = genesisMerkleRoot
+
+// bc2GenesisBlock has a different time stamp and difficulty
+var bc2GenesisBlock = wire.MsgBlock{
+	Header: wire.BlockHeader{
+		Version:    1,
+		PrevBlock:  chainhash.Hash{},         // 0000000000000000000000000000000000000000000000000000000000000000
+		MerkleRoot: bc2GenesisMerkleRoot,     // 4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b
+		Timestamp:  time.Unix(1483467305, 0), // later
+		Bits:       0x1d7fffff,               // 486604799 [00000000ffff0000000000000000000000000000000000000000000000000000]
+		Nonce:      0x334188d,                // 53745805
+	},
+	Transactions: []*wire.MsgTx{&genesisCoinbaseTx},
+}
+
 // simNetGenesisHash is the hash of the first block in the block chain for the
 // simulation test network.
 var simNetGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
