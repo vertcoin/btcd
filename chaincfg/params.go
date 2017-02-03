@@ -325,7 +325,7 @@ var BC2NetParams = Params{
 	RelayNonStdTxs: true,
 
 	// Address encoding magics
-	PubKeyHashAddrID:        0x19, // starts with b
+	PubKeyHashAddrID:        0x19, // starts with B
 	ScriptHashAddrID:        0x1c, // starts with ?
 	WitnessPubKeyHashAddrID: 0x77, // starts with H5
 	WitnessScriptHashAddrID: 0x79, // starts with ?
@@ -572,4 +572,5 @@ func init() {
 	mustRegister(&TestNet3Params)
 	mustRegister(&RegressionNetParams)
 	mustRegister(&SimNetParams)
+	mustRegister(&BC2NetParams)
 }
