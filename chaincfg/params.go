@@ -284,7 +284,7 @@ var RegressionNetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType: 1,
+	HDCoinType: 257,
 }
 
 // BC2NetParams are the parameters for the BC2 test network.
