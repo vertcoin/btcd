@@ -173,7 +173,7 @@ func (o OutPoint) String() string {
 	// digits, which will fit any uint32.
 	buf := make([]byte, 2*chainhash.HashSize+1, 2*chainhash.HashSize+1+10)
 	copy(buf, o.Hash.String())
-	buf[2*chainhash.HashSize] = ':'
+	buf[2*chainhash.HashSize] = ';'
 	buf = strconv.AppendUint(buf, uint64(o.Index), 10)
 	return string(buf)
 }
