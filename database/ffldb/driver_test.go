@@ -12,10 +12,10 @@ import (
 	"runtime"
 	"testing"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/database"
-	"github.com/btcsuite/btcd/database/ffldb"
-	"github.com/btcsuite/btcutil"
+	"github.com/adiabat/btcd/chaincfg"
+	"github.com/adiabat/btcd/database"
+	"github.com/adiabat/btcd/database/ffldb"
+	"github.com/adiabat/btcutil"
 )
 
 // dbType is the database type name for this driver.

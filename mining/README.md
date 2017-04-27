@@ -5,7 +5,7 @@ mining
 (https://travis-ci.org/btcsuite/btcd) [![ISC License]
 (http://img.shields.io/badge/license-ISC-blue.svg)](http://copyfree.org)
 [![GoDoc](https://img.shields.io/badge/godoc-reference-blue.svg)]
-(http://godoc.org/github.com/btcsuite/btcd/mining)
+(http://godoc.org/github.com/adiabat/btcd/mining)
 
 ## Overview
 
@@ -14,7 +14,7 @@ This package is currently a work in progress.
 ## Installation and Updating
 
 ```bash
-$ go get -u github.com/btcsuite/btcd/mining
+$ go get -u github.com/adiabat/btcd/mining
 ```
 
 ## License

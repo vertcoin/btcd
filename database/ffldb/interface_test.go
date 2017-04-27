@@ -25,11 +25,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/database"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/adiabat/btcd/chaincfg"
+	"github.com/adiabat/btcd/chaincfg/chainhash"
+	"github.com/adiabat/btcd/database"
+	"github.com/adiabat/btcd/wire"
+	"github.com/adiabat/btcutil"
 )
 
 var (

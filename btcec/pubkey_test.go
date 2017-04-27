@@ -8,7 +8,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/adiabat/btcd/btcec"
 	"github.com/davecgh/go-spew/spew"
 )
 

@@ -12,7 +12,7 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/btcsuite/btcd/btcec"
+	"github.com/adiabat/btcd/btcec"
 	"github.com/btcsuite/fastsha256"
 )
 

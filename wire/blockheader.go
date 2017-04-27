@@ -9,7 +9,7 @@ import (
 	"io"
 	"time"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
+	"github.com/adiabat/btcd/chaincfg/chainhash"
 )
 
 // BlockVersion is the current latest supported block version.

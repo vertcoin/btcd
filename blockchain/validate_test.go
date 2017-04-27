@@ -10,11 +10,11 @@ import (
 	"testing"
 	"time"
 
-	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/adiabat/btcd/blockchain"
+	"github.com/adiabat/btcd/chaincfg"
+	"github.com/adiabat/btcd/chaincfg/chainhash"
+	"github.com/adiabat/btcd/wire"
+	"github.com/adiabat/btcutil"
 )
 
 // TestCheckConnectBlock tests the CheckConnectBlock function to ensure it

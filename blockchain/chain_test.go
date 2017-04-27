@@ -7,10 +7,10 @@ package blockchain_test
 import (
 	"testing"
 
-	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcutil"
+	"github.com/adiabat/btcd/blockchain"
+	"github.com/adiabat/btcd/chaincfg"
+	"github.com/adiabat/btcd/chaincfg/chainhash"
+	"github.com/adiabat/btcutil"
 )
 
 // TestHaveBlock tests the HaveBlock API to ensure proper functionality.

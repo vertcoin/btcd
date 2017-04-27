@@ -10,7 +10,7 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/btcsuite/btcd/database"
+	"github.com/adiabat/btcd/database"
 	"github.com/btcsuite/btclog"
 	flags "github.com/btcsuite/go-flags"
 )

@@ -16,8 +16,8 @@ import (
 	"encoding/hex"
 	"testing"
 
-	"github.com/btcsuite/btcd/wire"
-	"github.com/btcsuite/btcutil"
+	"github.com/adiabat/btcd/wire"
+	"github.com/adiabat/btcutil"
 )
 
 // TstMaxScriptSize makes the internal maxScriptSize constant available to the

@@ -5,7 +5,7 @@ imports:
   version: 73889fb79bd687870312b6e40effcecffbd57d30
 - name: github.com/btcsuite/btcrpcclient
   version: 2b780d16b042054d07aa322146194118fd7f7b81
-- name: github.com/btcsuite/btcutil
+- name: github.com/adiabat/btcutil
   version: 68e5965458062d031a6e333b35c778ce464fb73f
   subpackages:
   - .

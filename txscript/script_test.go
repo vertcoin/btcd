@@ -9,7 +9,7 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/btcsuite/btcd/txscript"
+	"github.com/adiabat/btcd/txscript"
 )
 
 // TestPushedData ensured the PushedData function extracts the expected data out

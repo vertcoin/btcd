@@ -20,11 +20,11 @@ import (
 	"strings"
 	"time"
 
-	"github.com/btcsuite/btcd/blockchain"
-	"github.com/btcsuite/btcd/database"
-	_ "github.com/btcsuite/btcd/database/ffldb"
-	"github.com/btcsuite/btcd/mempool"
-	"github.com/btcsuite/btcutil"
+	"github.com/adiabat/btcd/blockchain"
+	"github.com/adiabat/btcd/database"
+	_ "github.com/adiabat/btcd/database/ffldb"
+	"github.com/adiabat/btcd/mempool"
+	"github.com/adiabat/btcutil"
 	flags "github.com/btcsuite/go-flags"
 	"github.com/btcsuite/go-socks/socks"
 )

@@ -991,7 +991,7 @@ package main
 
 import (
 	"github.com/btcsuite/btcrpcclient"
-	"github.com/btcsuite/btcutil"
+	"github.com/adiabat/btcutil"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -1051,9 +1051,9 @@ package main
 
 import (
 	"github.com/btcsuite/btcrpcclient"
-	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/adiabat/btcutil"
+	"github.com/adiabat/btcd/chaincfg/chainhash"
+	"github.com/adiabat/btcd/wire"
 	"io/ioutil"
 	"log"
 	"path/filepath"
@@ -1142,9 +1142,9 @@ package main
 
 import (
 	"github.com/btcsuite/btcrpcclient"
-	"github.com/btcsuite/btcutil"
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/adiabat/btcutil"
+	"github.com/adiabat/btcd/chaincfg/chainhash"
+	"github.com/adiabat/btcd/wire"
 	"io/ioutil"
 	"log"
 	"path/filepath"

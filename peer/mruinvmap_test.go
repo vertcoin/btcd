@@ -9,8 +9,8 @@ import (
 	"fmt"
 	"testing"
 
-	"github.com/btcsuite/btcd/chaincfg/chainhash"
-	"github.com/btcsuite/btcd/wire"
+	"github.com/adiabat/btcd/chaincfg/chainhash"
+	"github.com/adiabat/btcd/wire"
 )
 
 // TestMruInventoryMap ensures the MruInventoryMap behaves as expected including

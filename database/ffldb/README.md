@@ -35,16 +35,16 @@ if err != nil {
 
 ## Documentation
 
-[![GoDoc](https://godoc.org/github.com/btcsuite/btcd/database/ffldb?status.png)]
-(http://godoc.org/github.com/btcsuite/btcd/database/ffldb)
+[![GoDoc](https://godoc.org/github.com/adiabat/btcd/database/ffldb?status.png)]
+(http://godoc.org/github.com/adiabat/btcd/database/ffldb)
 
 Full `go doc` style documentation for the project can be viewed online without
 installing this package by using the GoDoc site here:
-http://godoc.org/github.com/btcsuite/btcd/database/ffldb
+http://godoc.org/github.com/adiabat/btcd/database/ffldb
 
 You can also view the documentation locally once the package is installed with
 the `godoc` tool by running `godoc -http=":6060"` and pointing your browser to
-http://localhost:6060/pkg/github.com/btcsuite/btcd/database/ffldb
+http://localhost:6060/pkg/github.com/adiabat/btcd/database/ffldb
 
 ## License
 

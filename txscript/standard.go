@@ -5,8 +5,8 @@
 package txscript
 
 import (
-	"github.com/btcsuite/btcd/chaincfg"
-	"github.com/btcsuite/btcutil"
+	"github.com/adiabat/btcd/chaincfg"
+	"github.com/adiabat/btcutil"
 )
 
 const (
