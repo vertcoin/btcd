@@ -35,6 +35,8 @@ var (
 
 	bc2NetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 231), bigOne)
 
+	liteCoinTestNet4PowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 236), bigOne)
+
 	// simNetPowLimit is the highest proof of work value a Bitcoin block
 	// can have for the simulation test network.  It is the value 2^255 - 1.
 	simNetPowLimit = new(big.Int).Sub(new(big.Int).Lsh(bigOne, 255), bigOne)
@@ -338,6 +340,63 @@ var BC2NetParams = Params{
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
 	HDCoinType: 1,
+}
+
+// LiteCoinTestNet4Params are the parameters for the litecoin test network 4.
+var LiteCoinTestNet4Params = Params{
+	Name:        "litetest4",
+	Net:         wire.LiteTest4Net,
+	DefaultPort: "19335",
+	DNSSeeds: []string{
+		"testnet-seed.litecointools.com",
+		"seed-b.litecoin.loshan.co.uk",
+		"dnsseed-testnet.thrasher.io",
+	},
+
+	// Chain parameters
+	GenesisBlock:             &bc2GenesisBlock, // no it's not
+	GenesisHash:              &liteCoinTestNet4GenesisHash,
+	PowLimit:                 liteCoinTestNet4PowLimit,
+	PowLimitBits:             0x1e0fffff,
+	CoinbaseMaturity:         100,
+	SubsidyReductionInterval: 840000,
+	TargetTimespan:           time.Hour * 84,    // 84 hours
+	TargetTimePerBlock:       time.Second * 150, // 150 seconds
+	RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
+	ReduceMinDifficulty:      true,
+	MinDiffReductionTime:     time.Minute * 10, // ?? unknown
+	GenerateSupported:        false,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{},
+
+	// Enforce current block version once majority of the network has
+	// upgraded.
+	// 51% (51 / 100)
+	// Reject previous block versions once a majority of the network has
+	// upgraded.
+	// 75% (75 / 100)
+	BlockEnforceNumRequired: 51,
+	BlockRejectNumRequired:  75,
+	BlockUpgradeNumToCheck:  100,
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Address encoding magics
+	PubKeyHashAddrID:        0x6f, // starts with m or n
+	ScriptHashAddrID:        0xc4, // starts with 2
+	WitnessPubKeyHashAddrID: 0x77, // starts with H5
+	WitnessScriptHashAddrID: 0x79, // starts with ?
+	PrivateKeyID:            0xef, // starts with 9 7(uncompressed) or c (compressed)
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 65537, // i dunno, 0x010001 ?
 }
 
 // TestNet3Params defines the network parameters for the test Bitcoin network
