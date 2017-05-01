@@ -141,11 +141,10 @@ type Params struct {
 	RelayNonStdTxs bool
 
 	// Address encoding magics
-	PubKeyHashAddrID        byte // First byte of a P2PKH address
-	ScriptHashAddrID        byte // First byte of a P2SH address
-	PrivateKeyID            byte // First byte of a WIF private key
-	WitnessPubKeyHashAddrID byte // First byte of a P2WPKH address
-	WitnessScriptHashAddrID byte // First byte of a P2WSH address
+	PubKeyHashAddrID byte   // First byte of a P2PKH address
+	ScriptHashAddrID byte   // First byte of a P2SH address
+	PrivateKeyID     byte   // First byte of a WIF private key
+	Bech32Prefix     string // HRP for bech32 address
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID [4]byte
@@ -221,11 +220,10 @@ var MainNetParams = Params{
 	RelayNonStdTxs: false,
 
 	// Address encoding magics
-	PubKeyHashAddrID:        0x00, // starts with 1
-	ScriptHashAddrID:        0x05, // starts with 3
-	PrivateKeyID:            0x80, // starts with 5 (uncompressed) or K (compressed)
-	WitnessPubKeyHashAddrID: 0x06, // starts with p2
-	WitnessScriptHashAddrID: 0x0A, // starts with 7Xh
+	PubKeyHashAddrID: 0x00, // starts with 1
+	ScriptHashAddrID: 0x05, // starts with 3
+	PrivateKeyID:     0x80, // starts with 5 (uncompressed) or K (compressed)
+	Bech32Prefix:     "bc", // starts with bc1
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID: [4]byte{0x04, 0x88, 0xad, 0xe4}, // starts with xprv
@@ -279,6 +277,7 @@ var RegressionNetParams = Params{
 	PubKeyHashAddrID: 0x6f, // starts with m or n
 	ScriptHashAddrID: 0xc4, // starts with 2
 	PrivateKeyID:     0xef, // starts with 9 (uncompressed) or c (compressed)
+	Bech32Prefix:     "rt",
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
@@ -327,11 +326,10 @@ var BC2NetParams = Params{
 	RelayNonStdTxs: true,
 
 	// Address encoding magics
-	PubKeyHashAddrID:        0x19, // starts with B
-	ScriptHashAddrID:        0x1c, // starts with ?
-	WitnessPubKeyHashAddrID: 0x77, // starts with H5
-	WitnessScriptHashAddrID: 0x79, // starts with ?
-	PrivateKeyID:            0xef, // starts with 9 7(uncompressed) or c (compressed)
+	PubKeyHashAddrID: 0x19, // starts with B
+	ScriptHashAddrID: 0x1c, // starts with ?
+	Bech32Prefix:     "bc2",
+	PrivateKeyID:     0xef, // starts with 9 7(uncompressed) or c (compressed)
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
@@ -439,11 +437,10 @@ var LiteCoinTestNet4Params = Params{
 	RelayNonStdTxs: true,
 
 	// Address encoding magics
-	PubKeyHashAddrID:        0x6f, // starts with m or n
-	ScriptHashAddrID:        0xc4, // starts with 2
-	WitnessPubKeyHashAddrID: 0x77, // starts with H5
-	WitnessScriptHashAddrID: 0x79, // starts with ?
-	PrivateKeyID:            0xef, // starts with 9 7(uncompressed) or c (compressed)
+	PubKeyHashAddrID: 0x6f, // starts with m or n
+	ScriptHashAddrID: 0xc4, // starts with 2
+	Bech32Prefix:     "tltc",
+	PrivateKeyID:     0xef, // starts with 9 7(uncompressed) or c (compressed)
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
@@ -500,11 +497,10 @@ var TestNet3Params = Params{
 	RelayNonStdTxs: true,
 
 	// Address encoding magics
-	PubKeyHashAddrID:        0x6f, // starts with m or n
-	ScriptHashAddrID:        0xc4, // starts with 2
-	WitnessPubKeyHashAddrID: 0x77, // starts with H5
-	WitnessScriptHashAddrID: 0x79, // starts with ?
-	PrivateKeyID:            0xef, // starts with 9 (uncompressed) or c (compressed)
+	PubKeyHashAddrID: 0x6f, // starts with m or n
+	ScriptHashAddrID: 0xc4, // starts with 2
+	Bech32Prefix:     "tb",
+	PrivateKeyID:     0xef, // starts with 9 (uncompressed) or c (compressed)
 
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
@@ -559,12 +555,10 @@ var SimNetParams = Params{
 	RelayNonStdTxs: true,
 
 	// Address encoding magics
-	PubKeyHashAddrID:        0x3f, // starts with S
-	ScriptHashAddrID:        0x7b, // starts with s
-	PrivateKeyID:            0x64, // starts with 4 (uncompressed) or F (compressed)
-	WitnessPubKeyHashAddrID: 0x19, // starts with Gg
-	WitnessScriptHashAddrID: 0x28, // starts with ?
-
+	PubKeyHashAddrID: 0x3f, // starts with S
+	ScriptHashAddrID: 0x7b, // starts with s
+	PrivateKeyID:     0x64, // starts with 4 (uncompressed) or F (compressed)
+	Bech32Prefix:     "smn",
 	// BIP32 hierarchical deterministic extended key magics
 	HDPrivateKeyID: [4]byte{0x04, 0x20, 0xb9, 0x00}, // starts with sprv
 	HDPublicKeyID:  [4]byte{0x04, 0x20, 0xbd, 0x3a}, // starts with spub
