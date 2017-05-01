@@ -382,8 +382,7 @@ var VertcoinTestNetParams = Params{
 	// Address encoding magics
 	PubKeyHashAddrID:        0x4a, // starts with m or n
 	ScriptHashAddrID:        0xc4, // starts with 2
-	WitnessPubKeyHashAddrID: 0x77, // starts with H5
-	WitnessScriptHashAddrID: 0x79, // starts with ?
+	Bech32Prefix:           "tvtc",
 	PrivateKeyID:            0xef, // starts with 9 7(uncompressed) or c (compressed)
 
 	// BIP32 hierarchical deterministic extended key magics
