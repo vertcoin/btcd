@@ -11,6 +11,9 @@ import (
 
 	"github.com/adiabat/btcd/chaincfg/chainhash"
 	"github.com/adiabat/btcd/wire"
+	
+	"golang.org/x/crypto/scrypt"
+	"github.com/bitgoin/lyra2rev2"
 )
 
 // These variables are the chain proof-of-work limit parameters for each default
@@ -76,6 +79,9 @@ type Params struct {
 
 	// GenesisHash is the starting block hash.
 	GenesisHash *chainhash.Hash
+
+	// The function used to calculate the proof of work value for a block
+	PoWFunction func(b []byte) chainhash.Hash
 
 	// PowLimit defines the highest allowed proof of work value for a block
 	// as a uint256.
@@ -173,6 +179,7 @@ var MainNetParams = Params{
 	// Chain parameters
 	GenesisBlock:             &genesisBlock,
 	GenesisHash:              &genesisHash,
+	PoWFunction:		  chainhash.DoubleHashH,
 	PowLimit:                 mainPowLimit,
 	PowLimitBits:             0x1d00ffff,
 	CoinbaseMaturity:         100,
@@ -186,7 +193,6 @@ var MainNetParams = Params{
 
 	// Checkpoints ordered from oldest to newest.
 	Checkpoints: []Checkpoint{
-		{11111, newHashFromStr("0000000069e244f73d78e8fd29ba2fd2ed618bd6fa2ee92559f542fdb26e7c1d")},
 		{33333, newHashFromStr("000000002dd5588a74784eaa7ab0507a18ad16a236e7b1ce69f00d7ddfb5d0a6")},
 		{74000, newHashFromStr("0000000000573993a3c9e41ce34471c079dcf5f52a0e824a81e7f953b8661a20")},
 		{105000, newHashFromStr("00000000000291ce28027faea320c8d2b054b2e0fe44a773f3eefb151d6bdc97")},
@@ -246,6 +252,7 @@ var RegressionNetParams = Params{
 	// Chain parameters
 	GenesisBlock:             &regTestGenesisBlock,
 	GenesisHash:              &regTestGenesisHash,
+	PoWFunction:              chainhash.DoubleHashH,
 	PowLimit:                 regressionPowLimit,
 	PowLimitBits:             0x207fffff,
 	CoinbaseMaturity:         100,
@@ -296,6 +303,7 @@ var BC2NetParams = Params{
 	DNSSeeds:    []string{},
 
 	// Chain parameters
+	PoWFunction:              chainhash.DoubleHashH,
 	GenesisBlock:             &bc2GenesisBlock,
 	GenesisHash:              &bc2GenesisHash,
 	PowLimit:                 bc2NetPowLimit,
@@ -353,6 +361,11 @@ var VertcoinTestNetParams = Params{
 	GenesisBlock:             &VertcoinTestnetGenesisBlock,
 	GenesisHash:              &VertcoinTestnetGenesisHash,
 	PowLimit:                 liteCoinTestNet4PowLimit,
+	PoWFunction:              func(b []byte) chainhash.Hash {
+					lyraBytes, _ := lyra2rev2.Sum(b)
+					asChainHash, _ := chainhash.NewHash(lyraBytes)
+					return *asChainHash
+				  },
 	PowLimitBits:             0x1e0fffff,
 	CoinbaseMaturity:         120,
 	SubsidyReductionInterval: 840000,
@@ -408,6 +421,11 @@ var LiteCoinTestNet4Params = Params{
 	// Chain parameters
 	GenesisBlock:             &bc2GenesisBlock, // no it's not
 	GenesisHash:              &liteCoinTestNet4GenesisHash,
+	PoWFunction:              func(b []byte) chainhash.Hash {
+                                        scryptBytes, _ := scrypt.Key(b, b, 1024, 1, 1, 256)
+                                        asChainHash, _ := chainhash.NewHash(scryptBytes)
+                                        return *asChainHash
+                                  },
 	PowLimit:                 liteCoinTestNet4PowLimit,
 	PowLimitBits:             0x1e0fffff,
 	CoinbaseMaturity:         100,
@@ -466,6 +484,7 @@ var TestNet3Params = Params{
 	// Chain parameters
 	GenesisBlock:             &testNet3GenesisBlock,
 	GenesisHash:              &testNet3GenesisHash,
+	PoWFunction:              chainhash.DoubleHashH,
 	PowLimit:                 testNet3PowLimit,
 	PowLimitBits:             0x1d00ffff,
 	CoinbaseMaturity:         100,
@@ -526,6 +545,7 @@ var SimNetParams = Params{
 	// Chain parameters
 	GenesisBlock:             &simNetGenesisBlock,
 	GenesisHash:              &simNetGenesisHash,
+	PoWFunction:              chainhash.DoubleHashH,
 	PowLimit:                 simNetPowLimit,
 	PowLimitBits:             0x207fffff,
 	CoinbaseMaturity:         100,
