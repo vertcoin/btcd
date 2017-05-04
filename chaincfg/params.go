@@ -11,6 +11,7 @@ import (
 	"time"
   "io"
   "os"
+  "log"
 
 	"github.com/adiabat/btcd/chaincfg/chainhash"
   "github.com/adiabat/btcd/chaincfg/difficulty"
@@ -195,6 +196,45 @@ func calcDiffAdjustBitcoin(start, end wire.BlockHeader, p *Params) uint32 {
   
 	// clip again if above minimum target (too easy)
 	if newTarget.Cmp(powLimit) > 0 {
+    log.Printf("clipping")
+		newTarget.Set(powLimit)
+	}
+  
+	// calculate and return 4-byte 'bits' difficulty from 32-byte target
+	return difficulty.BigToCompact(newTarget)
+}
+
+func calcDiffAdjustLitecoin(start, end wire.BlockHeader, p *Params) uint32 {
+	minRetargetTimespan := int64(p.TargetTimespan.Seconds()) / p.RetargetAdjustmentFactor
+	maxRetargetTimespan := int64(p.TargetTimespan.Seconds()) * p.RetargetAdjustmentFactor
+	duration := end.Timestamp.UnixNano() - start.Timestamp.UnixNano()
+	if duration < minRetargetTimespan {
+		duration = minRetargetTimespan
+	} else if duration > maxRetargetTimespan {
+		duration = maxRetargetTimespan
+	}
+
+	// calculation of new 32-byte difficulty target
+	// first turn the previous target into a big int
+	prevTarget := difficulty.CompactToBig(start.Bits)
+  fShift := start.Bits > 235
+  if fShift {
+    prevTarget.Div(prevTarget, big.NewInt(2))
+  }
+	// new target is old * duration...
+	newTarget := new(big.Int).Mul(prevTarget, big.NewInt(duration))
+	// divided by 2 weeks
+	newTarget.Div(newTarget, big.NewInt(int64(p.TargetTimespan)))
+  
+  if fShift {
+    newTarget.Mul(newTarget, big.NewInt(2))
+  }
+
+  powLimit := difficulty.CompactToBig(p.PowLimitBits)
+  
+	// clip again if above minimum target (too easy)
+	if newTarget.Cmp(powLimit) > 0 {
+    log.Printf("clipping")
 		newTarget.Set(powLimit)
 	}
   
@@ -305,7 +345,7 @@ func LTCDiff (r io.ReadSeeker, height, startheight int32, p *Params) (uint32, er
     
     // In Litecoin the first epoch recalculates 2015 blocks back
     if height == epochLength {
-      _, err = r.Seek(int64(1), os.SEEK_SET)
+      _, err = r.Seek(int64(80), os.SEEK_SET)
       if err != nil {
         return 0, err
       }
@@ -315,7 +355,8 @@ func LTCDiff (r io.ReadSeeker, height, startheight int32, p *Params) (uint32, er
       }
     }
     
-    rightBits = calcDiffAdjustBitcoin(epochStart, prev, p)
+    log.Printf("Calcing diff")
+    rightBits = calcDiffAdjustLitecoin(epochStart, prev, p)
   } else { // not a new epoch
     rightBits = epochStart.Bits
     
@@ -733,15 +774,15 @@ var LiteCoinTestNet4Params = Params{
 	GenesisBlock:             &bc2GenesisBlock, // no it's not
 	GenesisHash:              &liteCoinTestNet4GenesisHash,
 	PoWFunction:              func(b []byte) chainhash.Hash {
-                                        scryptBytes, _ := scrypt.Key(b, b, 1024, 1, 1, 256)
-                                        asChainHash, _ := chainhash.NewHash(scryptBytes)
-                                        return *asChainHash
-                                  },
+                              scryptBytes, _ := scrypt.Key(b, b, 1024, 1, 1, 32)
+                              asChainHash, _ := chainhash.NewHash(scryptBytes)
+                              return *asChainHash
+                            },
 	PowLimit:                 liteCoinTestNet4PowLimit,
 	PowLimitBits:             0x1e0fffff,
 	CoinbaseMaturity:         100,
 	SubsidyReductionInterval: 840000,
-	TargetTimespan:           time.Hour * 84,    // 84 hours
+	TargetTimespan:           time.Second * 302400,    // 3.5 weeks
 	TargetTimePerBlock:       time.Second * 150, // 150 seconds
 	RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
 	ReduceMinDifficulty:      true,
