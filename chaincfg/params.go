@@ -192,13 +192,12 @@ func calcDiffAdjustBitcoin(start, end wire.BlockHeader, p *Params) uint32 {
 	// divided by 2 weeks
 	newTarget.Div(newTarget, big.NewInt(int64(p.TargetTimespan)))
 
+  powLimit := difficulty.CompactToBig(p.PowLimitBits)
+  
 	// clip again if above minimum target (too easy)
-	if newTarget.Cmp(p.PowLimit) > 0 {
-    log.Printf("Clipping")
-		newTarget.Set(p.PowLimit)
+	if newTarget.Cmp(powLimit) > 0 {
+		newTarget.Set(powLimit)
 	}
-
-  log.Printf("not Clipping")
   
 	// calculate and return 4-byte 'bits' difficulty from 32-byte target
 	return difficulty.BigToCompact(newTarget)
@@ -247,7 +246,6 @@ func BTCDiff (r io.ReadSeeker, height, startheight int32, p *Params) (uint32, er
     // if so, check if difficulty adjustment is valid.
     // That whole "controlled supply" thing.
     // calculate diff n based on n-2016 ... n-1
-    //rightBits = calcDiffAdjust(epochStart, prev, p)
     rightBits = calcDiffAdjustBitcoin(epochStart, prev, p)
   } else { // not a new epoch
     rightBits = epochStart.Bits
@@ -255,7 +253,76 @@ func BTCDiff (r io.ReadSeeker, height, startheight int32, p *Params) (uint32, er
     // if on testnet, check for difficulty nerfing
     if p.ReduceMinDifficulty && cur.Timestamp.After(
       prev.Timestamp.Add(p.TargetTimePerBlock*2)) {
-      //	fmt.Printf("nerf %d ", curHeight)
+      rightBits = p.PowLimitBits // difficulty 1
+    }
+  }
+  
+  return rightBits, nil
+}
+
+func LTCDiff (r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+  epochLength := int32(p.TargetTimespan / p.TargetTimePerBlock)
+  var err error
+  var cur, prev, epochStart wire.BlockHeader
+  
+  offsetHeight := height - startheight
+  
+  // seek to n-1 header
+  _, err = r.Seek(int64(80*(offsetHeight-1)), os.SEEK_SET)
+  if err != nil {
+    return 0, err
+  }
+  // read in n-1
+  err = prev.Deserialize(r)
+  if err != nil {
+    return 0, err
+  }
+  
+    // seek to curHeight header and read in
+  _, err = r.Seek(int64(80*(offsetHeight)), os.SEEK_SET)
+  if err != nil {
+    return 0, err
+  }
+  err = cur.Deserialize(r)
+  if err != nil {
+    return 0, err
+  }
+  
+  _, err = r.Seek(int64(80*(offsetHeight-(height%epochLength))), os.SEEK_SET)
+  if err != nil {
+    return 0, err
+  }
+  err = epochStart.Deserialize(r)
+  if err != nil {
+    return 0, err
+  }
+  
+  var rightBits uint32
+  
+  if (height)%epochLength == 0 {
+    // if so, check if difficulty adjustment is valid.
+    // That whole "controlled supply" thing.
+    // calculate diff n based on n-2016 ... n-1
+    
+    // In Litecoin the first epoch recalculates 2015 blocks back
+    if height == epochLength {
+      _, err = r.Seek(int64(1), os.SEEK_SET)
+      if err != nil {
+        return 0, err
+      }
+      err = epochStart.Deserialize(r)
+      if err != nil {
+        return 0, err
+      }
+    }
+    
+    rightBits = calcDiffAdjustBitcoin(epochStart, prev, p)
+  } else { // not a new epoch
+    rightBits = epochStart.Bits
+    
+    // if on testnet, check for difficulty nerfing
+    if p.ReduceMinDifficulty && cur.Timestamp.After(
+      prev.Timestamp.Add(p.TargetTimePerBlock*2)) {
       rightBits = p.PowLimitBits // difficulty 1
     }
   }
@@ -372,12 +439,8 @@ func calcDiffAdjustKGW(r io.ReadSeeker, height, startheight int32, p *Params) (u
 }
 
 func VTCTestDiff (r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
-  if height == 1 {
-    return 0x1e0fffff, nil
-  }
-  
   if height < 2116 {
-      return BTCDiff(r, height, startheight, p)
+      return LTCDiff(r, height, startheight, p)
   }
   
   offsetHeight := height - startheight
@@ -614,13 +677,13 @@ var VertcoinTestNetParams = Params{
                               asChainHash, _ := chainhash.NewHash(lyraBytes)
                               return *asChainHash
                             },
-	PowLimitBits:             0x1e0ffff0,
+	PowLimitBits:             0x1e0fffff,
 	CoinbaseMaturity:         120,
 	SubsidyReductionInterval: 840000,
-	TargetTimespan:           time.Hour * 24 * 14,    // 2 weeks
+	TargetTimespan:           time.Second * 302400,    // 3.5 weeks
 	TargetTimePerBlock:       time.Second * 150, // 150 seconds
 	RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
-	ReduceMinDifficulty:      false,
+	ReduceMinDifficulty:      true,
 	MinDiffReductionTime:     time.Minute * 10, // ?? unknown
 	GenerateSupported:        false,
 
@@ -667,7 +730,7 @@ var LiteCoinTestNet4Params = Params{
 	},
 
 	// Chain parameters
-  DiffCalcFunction:         BTCDiff,
+  DiffCalcFunction:         LTCDiff,
 	GenesisBlock:             &bc2GenesisBlock, // no it's not
 	GenesisHash:              &liteCoinTestNet4GenesisHash,
 	PoWFunction:              func(b []byte) chainhash.Hash {
