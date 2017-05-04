@@ -8,6 +8,7 @@ import (
 	"fmt"
 
 	"github.com/adiabat/btcd/chaincfg/chainhash"
+  "github.com/adiabat/btcd/chaincfg/difficulty"
 	"github.com/adiabat/btcd/database"
 	"github.com/adiabat/btcutil"
 )
@@ -186,9 +187,9 @@ func (b *BlockChain) ProcessBlock(block *btcutil.Block, flags BehaviorFlags) (bo
 			// expected based on elapsed time since the last checkpoint and
 			// maximum adjustment allowed by the retarget rules.
 			duration := blockHeader.Timestamp.Sub(checkpointTime)
-			requiredTarget := CompactToBig(b.calcEasiestDifficulty(
+			requiredTarget := difficulty.CompactToBig(b.calcEasiestDifficulty(
 				checkpointHeader.Bits, duration))
-			currentTarget := CompactToBig(blockHeader.Bits)
+			currentTarget := difficulty.CompactToBig(blockHeader.Bits)
 			if currentTarget.Cmp(requiredTarget) > 0 {
 				str := fmt.Sprintf("block target difficulty of %064x "+
 					"is too low when compared to the previous "+
