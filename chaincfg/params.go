@@ -11,7 +11,6 @@ import (
 	"time"
   "io"
   "os"
-  "log"
 
 	"github.com/adiabat/btcd/chaincfg/chainhash"
   "github.com/adiabat/btcd/chaincfg/difficulty"
