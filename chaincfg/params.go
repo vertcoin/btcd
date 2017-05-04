@@ -11,7 +11,6 @@ import (
 	"time"
   "io"
   "os"
-  "log"
 
 	"github.com/adiabat/btcd/chaincfg/chainhash"
   "github.com/adiabat/btcd/chaincfg/difficulty"
@@ -196,7 +195,6 @@ func calcDiffAdjustBitcoin(start, end wire.BlockHeader, p *Params) uint32 {
   
 	// clip again if above minimum target (too easy)
 	if newTarget.Cmp(powLimit) > 0 {
-    log.Printf("clipping")
 		newTarget.Set(powLimit)
 	}
   
@@ -234,7 +232,6 @@ func calcDiffAdjustLitecoin(start, end wire.BlockHeader, p *Params) uint32 {
   
 	// clip again if above minimum target (too easy)
 	if newTarget.Cmp(powLimit) > 0 {
-    log.Printf("clipping")
 		newTarget.Set(powLimit)
 	}
   
@@ -355,7 +352,6 @@ func LTCDiff (r io.ReadSeeker, height, startheight int32, p *Params) (uint32, er
       }
     }
     
-    log.Printf("Calcing diff")
     rightBits = calcDiffAdjustLitecoin(epochStart, prev, p)
   } else { // not a new epoch
     rightBits = epochStart.Bits
@@ -700,7 +696,7 @@ var BC2NetParams = Params{
 
 // LiteCoinTestNet4Params are the parameters for the litecoin test network 4.
 var VertcoinTestNetParams = Params{
-	Name:        "test",
+	Name:        "vtctest",
 	Net:         wire.VertTestNet,
 	DefaultPort: "15889",
 	DNSSeeds: []string{
