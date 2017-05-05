@@ -337,7 +337,7 @@ var BC2NetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType: 1,
+	HDCoinType: 2,
 }
 
 // LiteCoinTestNet4Params are the parameters for the litecoin test network 4.
