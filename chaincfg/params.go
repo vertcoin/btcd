@@ -660,7 +660,7 @@ var BC2NetParams = Params{
 
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
-	HDCoinType: 1,
+	HDCoinType: 2,
 }
 
 // LiteCoinTestNet4Params are the parameters for the litecoin test network 4.
@@ -916,10 +916,15 @@ var (
 	// is intended to identify the network for a hierarchical deterministic
 	// private extended key is not registered.
 	ErrUnknownHDKeyID = errors.New("unknown hd private extended key bytes")
+
+	// ErrUnknownPrefix describes and error where the provided prefix string
+	// isn't found associated with a parameter set / HDCoinType
+	ErrUnknownPrefix = errors.New("unknown bech32 prefix")
 )
 
 var (
 	registeredNets    = make(map[wire.BitcoinNet]struct{})
+	bech32Prefixes    = make(map[string]uint32)
 	pubKeyHashAddrIDs = make(map[byte]struct{})
 	scriptHashAddrIDs = make(map[byte]struct{})
 	hdPrivToPubKeyIDs = make(map[[4]byte][]byte)
@@ -939,6 +944,7 @@ func Register(params *Params) error {
 		return ErrDuplicateNet
 	}
 	registeredNets[params.Net] = struct{}{}
+	bech32Prefixes[params.Bech32Prefix] = params.HDCoinType
 	pubKeyHashAddrIDs[params.PubKeyHashAddrID] = struct{}{}
 	scriptHashAddrIDs[params.ScriptHashAddrID] = struct{}{}
 	hdPrivToPubKeyIDs[params.HDPrivateKeyID] = params.HDPublicKeyID[:]
@@ -951,6 +957,16 @@ func mustRegister(params *Params) {
 	if err := Register(params); err != nil {
 		panic("failed to register network: " + err.Error())
 	}
+}
+
+// PrefixToCoinType returns the HDCoinType for a params set given the bech32 prefix.
+// If that prefix isn't registered, it returns an error.
+func PrefixToCoinType(prefix string) (uint32, error) {
+	coinType, ok := bech32Prefixes[prefix]
+	if !ok {
+		return 0, ErrUnknownPrefix
+	}
+	return coinType, nil
 }
 
 // IsPubKeyHashAddrID returns whether the id is an identifier known to prefix a
@@ -1019,4 +1035,5 @@ func init() {
 	mustRegister(&RegressionNetParams)
 	mustRegister(&SimNetParams)
 	mustRegister(&BC2NetParams)
+	mustRegister(&LiteCoinTestNet4Params)
 }

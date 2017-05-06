@@ -9,6 +9,8 @@ import (
 	"io"
 	"time"
 
+	"golang.org/x/crypto/scrypt"
+
 	"github.com/adiabat/btcd/chaincfg/chainhash"
 )
 
@@ -57,6 +59,18 @@ func (h *BlockHeader) BlockHash() chainhash.Hash {
 	_ = WriteBlockHeader(&buf, 0, h)
 
 	return chainhash.DoubleHashH(buf.Bytes())
+}
+
+// ScryptHash returns the 32 byte scrypt hash of the 80 byte header
+func (h *BlockHeader) ScryptHash() chainhash.Hash {
+	var buf bytes.Buffer
+	_ = writeBlockHeader(&buf, 0, h)
+
+	scryptBytes, _ := scrypt.Key(buf.Bytes(), buf.Bytes(), 1024, 1, 1, 32)
+
+	var scryptHash [32]byte
+	copy(scryptHash[:], scryptBytes)
+	return scryptHash
 }
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
