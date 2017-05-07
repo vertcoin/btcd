@@ -85,7 +85,7 @@ type Params struct {
 	GenesisHash *chainhash.Hash
 
 	// The function used to calculate the proof of work value for a block
-	PoWFunction func(b []byte) chainhash.Hash
+	PoWFunction func(b []byte, height int32) chainhash.Hash
   
   // The function used to calculate the difficulty of a given block
   DiffCalcFunction func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error)
@@ -189,7 +189,7 @@ func calcDiffAdjustBitcoin(start, end wire.BlockHeader, p *Params) uint32 {
 	// new target is old * duration...
 	newTarget := new(big.Int).Mul(prevTarget, big.NewInt(duration))
 	// divided by 2 weeks
-	newTarget.Div(newTarget, big.NewInt(int64(p.TargetTimespan / time.Second)))
+	newTarget.Div(newTarget, big.NewInt(int64(p.TargetTimespan.Seconds())))
 
   powLimit := difficulty.CompactToBig(p.PowLimitBits)
   
@@ -305,7 +305,7 @@ func LTCDiff (r io.ReadSeeker, height, startheight int32, p *Params) (uint32, er
     
     // In Litecoin the first epoch recalculates 2015 blocks back
     if height == epochLength {
-      _, err = r.Seek(int64(0), os.SEEK_SET)
+      _, err = r.Seek(int64(80), os.SEEK_SET)
       if err != nil {
         return 0, err
       }
@@ -372,7 +372,7 @@ func calcDiffAdjustKGW(r io.ReadSeeker, height, startheight int32, p *Params) (u
   
   var i int32
   
-  for i = 1; currentHeight != 1; i++ {
+  for i = 1; currentHeight > 0; i++ {
     if i > maxBlocks {
       break
     }
@@ -393,7 +393,7 @@ func calcDiffAdjustKGW(r io.ReadSeeker, height, startheight int32, p *Params) (u
     previousDifficultyAverage = difficultyAverage
     
     actualRate = lastSolved.Timestamp.Unix() - currentBlock.Timestamp.Unix()
-    targetRate = int64(p.TargetTimePerBlock.Seconds()) * blocksScanned
+    targetRate = int64(p.TargetTimePerBlock.Nanoseconds() / 10^6) * blocksScanned
     rateAdjustmentRatio = 1
     
     if actualRate < 0 {
@@ -412,7 +412,7 @@ func calcDiffAdjustKGW(r io.ReadSeeker, height, startheight int32, p *Params) (u
       break
     }
     
-    if currentHeight < 1 {
+    if currentHeight <= 1 {
       break
     }
     
@@ -473,6 +473,19 @@ func VTCTestDiff (r io.ReadSeeker, height, startheight int32, p *Params) (uint32
   return calcDiffAdjustKGW(r, height, startheight, p)
 }
 
+func VTCDiff (r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+  if height < 26754 {
+      return LTCDiff(r, height, startheight, p)
+  }
+  
+  if height == 208301 {
+    return 0x1e0ffff0, nil
+  }
+  
+  // Run KGW
+  return calcDiffAdjustKGW(r, height, startheight, p)
+}
+
 // MainNetParams defines the network parameters for the main Bitcoin network.
 var MainNetParams = Params{
 	Name:        "mainnet",
@@ -492,7 +505,9 @@ var MainNetParams = Params{
 	GenesisBlock:             &genesisBlock,
 	GenesisHash:              &genesisHash,
   DiffCalcFunction:         BTCDiff,
-	PoWFunction:		          chainhash.DoubleHashH,
+	PoWFunction:		          func(b []byte, height int32) chainhash.Hash {
+                              return chainhash.DoubleHashH(b)
+                            },
 	PowLimit:                 mainPowLimit,
 	PowLimitBits:             0x1d00ffff,
 	CoinbaseMaturity:         100,
@@ -565,7 +580,9 @@ var RegressionNetParams = Params{
 	// Chain parameters
 	GenesisBlock:             &regTestGenesisBlock,
 	GenesisHash:              &regTestGenesisHash,
-	PoWFunction:              chainhash.DoubleHashH,
+	PoWFunction:              func(b []byte, height int32) chainhash.Hash {
+                              return chainhash.DoubleHashH(b)
+                            },
   DiffCalcFunction:         BTCDiff,
 	PowLimit:                 regressionPowLimit,
 	PowLimitBits:             0x207fffff,
@@ -617,7 +634,9 @@ var BC2NetParams = Params{
 	DNSSeeds:    []string{},
 
 	// Chain parameters
-	PoWFunction:              chainhash.DoubleHashH,
+	PoWFunction:              func(b []byte, height int32) chainhash.Hash {
+                              return chainhash.DoubleHashH(b)
+                            },
   DiffCalcFunction:         BTCDiff,
 	GenesisBlock:             &bc2GenesisBlock,
 	GenesisHash:              &bc2GenesisHash,
@@ -663,6 +682,65 @@ var BC2NetParams = Params{
 	HDCoinType: 2,
 }
 
+var VertcoinParams = Params{
+	Name:        "vtc",
+	Net:         wire.VertcoinNet,
+	DefaultPort: "5889",
+	DNSSeeds: []string{
+		"fr1.vtconline.org",
+	},
+
+	// Chain parameters
+  DiffCalcFunction:         VTCDiff,
+	GenesisBlock:             &VertcoinGenesisBlock,
+	GenesisHash:              &VertcoinGenesisHash,
+	PowLimit:                 liteCoinTestNet4PowLimit,
+	PoWFunction:              func(b []byte, height int32) chainhash.Hash {
+                                lyraBytes, _ := lyra2rev2.Sum(b)
+                                asChainHash, _ := chainhash.NewHash(lyraBytes)
+                                return *asChainHash
+                            },
+	PowLimitBits:             0x1e0fffff,
+	CoinbaseMaturity:         120,
+	SubsidyReductionInterval: 840000,
+	TargetTimespan:           time.Second * 302400,    // 3.5 weeks
+	TargetTimePerBlock:       time.Second * 150, // 150 seconds
+	RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
+	ReduceMinDifficulty:      false,
+	MinDiffReductionTime:     time.Minute * 10, // ?? unknown
+	GenerateSupported:        false,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{},
+
+	// Enforce current block version once majority of the network has
+	// upgraded.
+	// 51% (51 / 100)
+	// Reject previous block versions once a majority of the network has
+	// upgraded.
+	// 75% (75 / 100)
+	BlockEnforceNumRequired: 1512,
+	BlockRejectNumRequired:  1915,
+	BlockUpgradeNumToCheck:  2016,
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Address encoding magics
+	PubKeyHashAddrID:        0x47, // starts with m or n
+	ScriptHashAddrID:        0x05, // starts with 2
+	Bech32Prefix:           "vtc",
+	PrivateKeyID:            0x80, // starts with 9 7(uncompressed) or c (compressed)
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 65537, // i dunno, 0x010001 ?
+}
+
 // LiteCoinTestNet4Params are the parameters for the litecoin test network 4.
 var VertcoinTestNetParams = Params{
 	Name:        "vtctest",
@@ -677,7 +755,7 @@ var VertcoinTestNetParams = Params{
 	GenesisBlock:             &VertcoinTestnetGenesisBlock,
 	GenesisHash:              &VertcoinTestnetGenesisHash,
 	PowLimit:                 liteCoinTestNet4PowLimit,
-	PoWFunction:              func(b []byte) chainhash.Hash {
+	PoWFunction:              func(b []byte, height int32) chainhash.Hash {
                               lyraBytes, _ := lyra2rev2.Sum(b)
                               asChainHash, _ := chainhash.NewHash(lyraBytes)
                               return *asChainHash
@@ -738,7 +816,7 @@ var LiteCoinTestNet4Params = Params{
   DiffCalcFunction:         LTCDiff,
 	GenesisBlock:             &bc2GenesisBlock, // no it's not
 	GenesisHash:              &liteCoinTestNet4GenesisHash,
-	PoWFunction:              func(b []byte) chainhash.Hash {
+	PoWFunction:              func(b []byte, height int32) chainhash.Hash {
                               scryptBytes, _ := scrypt.Key(b, b, 1024, 1, 1, 32)
                               asChainHash, _ := chainhash.NewHash(scryptBytes)
                               return *asChainHash
@@ -802,7 +880,9 @@ var TestNet3Params = Params{
   DiffCalcFunction:         BTCDiff,
 	GenesisBlock:             &testNet3GenesisBlock,
 	GenesisHash:              &testNet3GenesisHash,
-	PoWFunction:              chainhash.DoubleHashH,
+	PoWFunction:              func(b []byte, height int32) chainhash.Hash {
+                              return chainhash.DoubleHashH(b)
+                            },
 	PowLimit:                 testNet3PowLimit,
 	PowLimitBits:             0x1d00ffff,
 	CoinbaseMaturity:         100,
@@ -864,7 +944,9 @@ var SimNetParams = Params{
   DiffCalcFunction:         BTCDiff,
 	GenesisBlock:             &simNetGenesisBlock,
 	GenesisHash:              &simNetGenesisHash,
-	PoWFunction:              chainhash.DoubleHashH,
+	PoWFunction:              func(b []byte, height int32) chainhash.Hash {
+                              return chainhash.DoubleHashH(b)
+                            },
 	PowLimit:                 simNetPowLimit,
 	PowLimitBits:             0x207fffff,
 	CoinbaseMaturity:         100,
