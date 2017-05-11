@@ -11,6 +11,8 @@ import (
 
 	"github.com/adiabat/btcd/chaincfg/chainhash"
 	"github.com/adiabat/btcd/wire"
+  
+  "golang.org/x/crypto/scrypt"
 )
 
 // These variables are the chain proof-of-work limit parameters for each default
@@ -70,7 +72,10 @@ type Params struct {
 	// DNSSeeds defines a list of DNS seeds for the network that are used
 	// as one method to discover peers.
 	DNSSeeds []string
-
+  
+  // The function used to calculate the proof of work value for a block
+	PoWFunction func(b []byte, height int32) chainhash.Hash
+  
 	// GenesisBlock defines the first block of the chain.
 	GenesisBlock *wire.MsgBlock
 
@@ -171,6 +176,9 @@ var MainNetParams = Params{
 	},
 
 	// Chain parameters
+  PoWFunction:		          func(b []byte, height int32) chainhash.Hash {
+                              return chainhash.DoubleHashH(b)
+                            },
 	GenesisBlock:             &genesisBlock,
 	GenesisHash:              &genesisHash,
 	PowLimit:                 mainPowLimit,
@@ -244,6 +252,9 @@ var RegressionNetParams = Params{
 	DNSSeeds:    []string{},
 
 	// Chain parameters
+  PoWFunction:		          func(b []byte, height int32) chainhash.Hash {
+                              return chainhash.DoubleHashH(b)
+                            },
 	GenesisBlock:             &regTestGenesisBlock,
 	GenesisHash:              &regTestGenesisHash,
 	PowLimit:                 regressionPowLimit,
@@ -296,6 +307,9 @@ var BC2NetParams = Params{
 	DNSSeeds:    []string{},
 
 	// Chain parameters
+  PoWFunction:		          func(b []byte, height int32) chainhash.Hash {
+                              return chainhash.DoubleHashH(b)
+                            },
 	GenesisBlock:             &bc2GenesisBlock,
 	GenesisHash:              &bc2GenesisHash,
 	PowLimit:                 bc2NetPowLimit,
@@ -352,6 +366,11 @@ var LiteCoinTestNet4Params = Params{
 	},
 
 	// Chain parameters
+  PoWFunction:              func(b []byte, height int32) chainhash.Hash {
+                              scryptBytes, _ := scrypt.Key(b, b, 1024, 1, 1, 32)
+                              asChainHash, _ := chainhash.NewHash(scryptBytes)
+                              return *asChainHash
+                            },
 	GenesisBlock:             &bc2GenesisBlock, // no it's not
 	GenesisHash:              &liteCoinTestNet4GenesisHash,
 	PowLimit:                 liteCoinTestNet4PowLimit,
@@ -410,6 +429,9 @@ var TestNet3Params = Params{
 	},
 
 	// Chain parameters
+  PoWFunction:              func(b []byte, height int32) chainhash.Hash {
+                              return chainhash.DoubleHashH(b)
+                            },
 	GenesisBlock:             &testNet3GenesisBlock,
 	GenesisHash:              &testNet3GenesisHash,
 	PowLimit:                 testNet3PowLimit,
@@ -470,6 +492,9 @@ var SimNetParams = Params{
 	DNSSeeds:    []string{}, // NOTE: There must NOT be any seeds.
 
 	// Chain parameters
+  PoWFunction:              func(b []byte, height int32) chainhash.Hash {
+                              return chainhash.DoubleHashH(b)
+                            },
 	GenesisBlock:             &simNetGenesisBlock,
 	GenesisHash:              &simNetGenesisHash,
 	PowLimit:                 simNetPowLimit,

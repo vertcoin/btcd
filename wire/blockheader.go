@@ -9,8 +9,6 @@ import (
 	"io"
 	"time"
 
-	"golang.org/x/crypto/scrypt"
-
 	"github.com/adiabat/btcd/chaincfg/chainhash"
 )
 
@@ -56,21 +54,9 @@ func (h *BlockHeader) BlockHash() chainhash.Hash {
 	// encode could fail except being out of memory which would cause a
 	// run-time panic.
 	var buf bytes.Buffer
-	_ = writeBlockHeader(&buf, 0, h)
+	_ = WriteBlockHeader(&buf, 0, h)
 
 	return chainhash.DoubleHashH(buf.Bytes())
-}
-
-// ScryptHash returns the 32 byte scrypt hash of the 80 byte header
-func (h *BlockHeader) ScryptHash() chainhash.Hash {
-	var buf bytes.Buffer
-	_ = writeBlockHeader(&buf, 0, h)
-
-	scryptBytes, _ := scrypt.Key(buf.Bytes(), buf.Bytes(), 1024, 1, 1, 32)
-
-	var scryptHash [32]byte
-	copy(scryptHash[:], scryptBytes)
-	return scryptHash
 }
 
 // BtcDecode decodes r using the bitcoin protocol encoding into the receiver.
@@ -86,7 +72,7 @@ func (h *BlockHeader) BtcDecode(r io.Reader, pver uint32, enc MessageEncoding) e
 // See Serialize for encoding block headers to be stored to disk, such as in a
 // database, as opposed to encoding block headers for the wire.
 func (h *BlockHeader) BtcEncode(w io.Writer, pver uint32, enc MessageEncoding) error {
-	return writeBlockHeader(w, pver, h)
+	return WriteBlockHeader(w, pver, h)
 }
 
 // Deserialize decodes a block header from r into the receiver using a format
@@ -106,7 +92,7 @@ func (h *BlockHeader) Serialize(w io.Writer) error {
 	// At the current time, there is no difference between the wire encoding
 	// at protocol version 0 and the stable long-term storage format.  As
 	// a result, make use of writeBlockHeader.
-	return writeBlockHeader(w, 0, h)
+	return WriteBlockHeader(w, 0, h)
 }
 
 // NewBlockHeader returns a new BlockHeader using the provided previous block
@@ -140,10 +126,10 @@ func readBlockHeader(r io.Reader, pver uint32, bh *BlockHeader) error {
 	return nil
 }
 
-// writeBlockHeader writes a bitcoin block header to w.  See Serialize for
+// WriteBlockHeader writes a bitcoin block header to w.  See Serialize for
 // encoding block headers to be stored to disk, such as in a database, as
 // opposed to encoding for the wire.
-func writeBlockHeader(w io.Writer, pver uint32, bh *BlockHeader) error {
+func WriteBlockHeader(w io.Writer, pver uint32, bh *BlockHeader) error {
 	sec := uint32(bh.Timestamp.Unix())
 	err := writeElements(w, bh.Version, &bh.PrevBlock, &bh.MerkleRoot,
 		sec, bh.Bits, bh.Nonce)
