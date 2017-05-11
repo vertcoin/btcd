@@ -89,6 +89,12 @@ type Params struct {
 
 	// GenesisHash is the starting block hash.
 	GenesisHash *chainhash.Hash
+  
+  // The block header to start downloading blocks from
+  StartHeader string
+  
+  // The height of the StartHash
+  StartHeight int32
 
 	// PowLimit defines the highest allowed proof of work value for a block
 	// as a uint256.
@@ -642,6 +648,8 @@ var LiteCoinTestNet4Params = Params{
   DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
                               return diffBTC(r, height, startheight, p, true)
                             },
+  StartHeader:              "010000000000000000000000000000000000000000000000000000000000000000000000d9ced4ed1130f7b7faad9be25323ffafa33232a17c3edf6cfd97bee6bafbdd97f60ba158f0ff0f1ee1790400",
+  StartHeight:              47295,
 	GenesisBlock:             &bc2GenesisBlock, // no it's not
 	GenesisHash:              &liteCoinTestNet4GenesisHash,
 	PowLimit:                 liteCoinTestNet4PowLimit,
@@ -704,6 +712,8 @@ var TestNet3Params = Params{
   DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
                               return diffBTC(r, height, startheight, p, false)
                             },
+  StartHeader:              "00000020da33925b1f7a55e9fa8e6c955a20ea094148b60c5c88f69a4f500000000000003673b7b6ce8157d3cfcaf415b6740918df7610a8769d70334aa9abd9c941b25e7621215880ba371a85bf9646",
+  StartHeight:              1032192,
 	GenesisBlock:             &testNet3GenesisBlock,
 	GenesisHash:              &testNet3GenesisHash,
 	PowLimit:                 testNet3PowLimit,
