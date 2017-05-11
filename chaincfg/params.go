@@ -198,7 +198,7 @@ func calcDiffAdjustBitcoin(start, end wire.BlockHeader, p *Params) uint32 {
 	return BigToCompact(newTarget)
 }
 
-func diffBTC(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+func diffBTC(r io.ReadSeeker, height, startheight int32, p *Params, ltc bool) (uint32, error) {
   epochLength := int32(p.TargetTimespan / p.TargetTimePerBlock)
 	var err error
 	var cur, prev wire.BlockHeader
@@ -232,7 +232,15 @@ func diffBTC(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, err
 	// see if we're on a difficulty adjustment block
 	if (height)%epochLength == 0 {
     var epochStart wire.BlockHeader
-    _, err = r.Seek(int64(80*(offsetHeight-epochLength)), os.SEEK_SET)
+    if ltc {
+      if height == epochLength {
+        _, err = r.Seek(int64(80*(offsetHeight-epochLength)), os.SEEK_SET)
+      } else {
+        _, err = r.Seek(int64(80*(offsetHeight-epochLength-1)), os.SEEK_SET)
+      }
+    } else {
+      _, err = r.Seek(int64(80*(offsetHeight-epochLength)), os.SEEK_SET)
+    }
     if err != nil {
       log.Printf(err.Error())
       return 0, err
@@ -296,7 +304,9 @@ var MainNetParams = Params{
   PoWFunction:		          func(b []byte, height int32) chainhash.Hash {
                               return chainhash.DoubleHashH(b)
                             },
-  DiffCalcFunction:         diffBTC,
+  DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+                              return diffBTC(r, height, startheight, p, false)
+                            },
 	GenesisBlock:             &genesisBlock,
 	GenesisHash:              &genesisHash,
 	PowLimit:                 mainPowLimit,
@@ -373,7 +383,9 @@ var RegressionNetParams = Params{
   PoWFunction:		          func(b []byte, height int32) chainhash.Hash {
                               return chainhash.DoubleHashH(b)
                             },
-  DiffCalcFunction:         diffBTC,
+  DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+                              return diffBTC(r, height, startheight, p, false)
+                            },
 	GenesisBlock:             &regTestGenesisBlock,
 	GenesisHash:              &regTestGenesisHash,
 	PowLimit:                 regressionPowLimit,
@@ -429,7 +441,9 @@ var BC2NetParams = Params{
   PoWFunction:		          func(b []byte, height int32) chainhash.Hash {
                               return chainhash.DoubleHashH(b)
                             },
-  DiffCalcFunction:         diffBTC,
+  DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+                              return diffBTC(r, height, startheight, p, false)
+                            },
 	GenesisBlock:             &bc2GenesisBlock,
 	GenesisHash:              &bc2GenesisHash,
 	PowLimit:                 bc2NetPowLimit,
@@ -491,7 +505,9 @@ var LiteCoinTestNet4Params = Params{
                               asChainHash, _ := chainhash.NewHash(scryptBytes)
                               return *asChainHash
                             },
-  DiffCalcFunction:         diffBTC,
+  DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+                              return diffBTC(r, height, startheight, p, true)
+                            },
 	GenesisBlock:             &bc2GenesisBlock, // no it's not
 	GenesisHash:              &liteCoinTestNet4GenesisHash,
 	PowLimit:                 liteCoinTestNet4PowLimit,
@@ -553,7 +569,9 @@ var TestNet3Params = Params{
   PoWFunction:              func(b []byte, height int32) chainhash.Hash {
                               return chainhash.DoubleHashH(b)
                             },
-  DiffCalcFunction:         diffBTC,
+  DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+                              return diffBTC(r, height, startheight, p, false)
+                            },
 	GenesisBlock:             &testNet3GenesisBlock,
 	GenesisHash:              &testNet3GenesisHash,
 	PowLimit:                 testNet3PowLimit,
@@ -617,7 +635,9 @@ var SimNetParams = Params{
   PoWFunction:              func(b []byte, height int32) chainhash.Hash {
                               return chainhash.DoubleHashH(b)
                             },
-  DiffCalcFunction:         diffBTC,
+  DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+                              return diffBTC(r, height, startheight, p, false)
+                            },
 	GenesisBlock:             &simNetGenesisBlock,
 	GenesisHash:              &simNetGenesisHash,
 	PowLimit:                 simNetPowLimit,
