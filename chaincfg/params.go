@@ -95,6 +95,11 @@ type Params struct {
   
   // The height of the StartHash
   StartHeight int32
+  
+  // Assume the difficulty bits are valid before this header height
+  // This is needed for coins with variable retarget lookbacks that use 
+  // StartHeader to offset the beginning of the header chain for SPV
+  AssumeDiffBefore int32
 
 	// PowLimit defines the highest allowed proof of work value for a block
 	// as a uint256.
@@ -649,7 +654,8 @@ var LiteCoinTestNet4Params = Params{
                               return diffBTC(r, height, startheight, p, true)
                             },
   StartHeader:              "010000000000000000000000000000000000000000000000000000000000000000000000d9ced4ed1130f7b7faad9be25323ffafa33232a17c3edf6cfd97bee6bafbdd97f60ba158f0ff0f1ee1790400",
-  StartHeight:              47295,
+  StartHeight:              48384,
+  AssumeDiffBefore:         50401,
 	GenesisBlock:             &bc2GenesisBlock, // no it's not
 	GenesisHash:              &liteCoinTestNet4GenesisHash,
 	PowLimit:                 liteCoinTestNet4PowLimit,
