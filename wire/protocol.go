@@ -135,6 +135,9 @@ const (
 
 	// BC2Net represents the BC2 test network
 	LiteTest4Net BitcoinNet = 0xf1c8d2fd
+  
+  // VertcoinTestNet is the vertcoin test network
+	VertTestNet BitcoinNet = 0x74726576
 )
 
 // bnStrings is a map of bitcoin networks back to their constant names for

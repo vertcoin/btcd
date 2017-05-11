@@ -11,11 +11,13 @@ import (
   "io"
   "log"
   "os"
+  "math"
 
 	"github.com/adiabat/btcd/chaincfg/chainhash"
 	"github.com/adiabat/btcd/wire"
   
   "golang.org/x/crypto/scrypt"
+  "github.com/bitgoin/lyra2rev2"
 )
 
 // These variables are the chain proof-of-work limit parameters for each default
@@ -77,7 +79,7 @@ type Params struct {
 	DNSSeeds []string
   
   // The function used to calculate the proof of work value for a block
-	PoWFunction func(b []byte, height int32) chainhash.Hash
+	PoWFunction func(b []byte) chainhash.Hash
   
   // The function used to calculate the difficulty of a given block
   DiffCalcFunction func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error)
@@ -285,6 +287,144 @@ func diffBTC(r io.ReadSeeker, height, startheight int32, p *Params, ltc bool) (u
   return rightBits, nil
 }
 
+// Uses Kimoto Gravity Well for difficulty adjustment. Used in VTC, MONA etc
+func calcDiffAdjustKGW(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+  var minBlocks, maxBlocks int32
+  minBlocks = 144
+  maxBlocks = 4032
+  
+  if height - 1 < minBlocks {
+    return p.PowLimitBits, nil
+  }
+  
+  offsetHeight := height - startheight - 1
+  
+  var currentBlock wire.BlockHeader
+  var err error
+  
+  // seek to n-1 header
+  _, err = r.Seek(int64(80*offsetHeight), os.SEEK_SET)
+  if err != nil {
+    return 0, err
+  }
+  // read in n-1
+  err = currentBlock.Deserialize(r)
+  if err != nil {
+    return 0, err
+  }
+  
+  lastSolved := currentBlock
+  
+  var blocksScanned, actualRate, targetRate int64
+  var difficultyAverage, previousDifficultyAverage big.Int
+  var rateAdjustmentRatio, eventHorizonDeviation, eventHorizonDeviationFast, eventHorizonDevationSlow float64
+  rateAdjustmentRatio = 1
+  
+  currentHeight := height - 1
+  
+  var i int32
+  
+  for i = 1; currentHeight > 0; i++ {
+    if i > maxBlocks {
+      break
+    }
+    
+    blocksScanned++
+    
+    if i == 1 {
+      difficultyAverage = *CompactToBig(currentBlock.Bits)
+    } else {
+      compact := CompactToBig(currentBlock.Bits)
+      
+      difference  := new(big.Int).Sub(compact, &previousDifficultyAverage)
+      difference.Div(difference, big.NewInt(int64(i)))
+      difference.Add(difference, &previousDifficultyAverage)
+      difficultyAverage = *difference
+    }
+    
+    previousDifficultyAverage = difficultyAverage
+    
+    actualRate = lastSolved.Timestamp.Unix() - currentBlock.Timestamp.Unix()
+    targetRate = int64(p.TargetTimePerBlock.Seconds()) * blocksScanned
+    rateAdjustmentRatio = 1
+    
+    if actualRate < 0 {
+      actualRate = 0
+    }
+    
+    if actualRate != 0 && targetRate != 0 {
+      rateAdjustmentRatio = float64(targetRate) / float64(actualRate)
+    }
+    
+    eventHorizonDeviation = 1 + (0.7084 * math.Pow(float64(blocksScanned)/float64(minBlocks), -1.228))
+    eventHorizonDeviationFast = eventHorizonDeviation
+    eventHorizonDevationSlow = 1 / eventHorizonDeviation
+    
+    if blocksScanned >= int64(minBlocks) && (rateAdjustmentRatio <= eventHorizonDevationSlow || rateAdjustmentRatio >= eventHorizonDeviationFast) {
+      break
+    }
+    
+    if currentHeight <= 1 {
+      break
+    }
+    
+    currentHeight--
+    
+    _, err = r.Seek(int64(80*(currentHeight - startheight)), os.SEEK_SET)
+    if err != nil {
+      return 0, err
+    }
+    // read in n-1
+    err = currentBlock.Deserialize(r)
+    if err != nil {
+      return 0, err
+    }
+  }
+  
+  newTarget := difficultyAverage
+  if actualRate != 0 && targetRate != 0 {
+    newTarget.Mul(&newTarget, big.NewInt(actualRate))
+    
+    newTarget.Div(&newTarget, big.NewInt(targetRate))
+  }
+  
+  if newTarget.Cmp(p.PowLimit) == 1 {
+    newTarget = *p.PowLimit
+  }
+  
+  return BigToCompact(&newTarget), nil
+}
+
+func diffVTCtest(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+  if height < 2116 {
+      return diffBTC(r, height, startheight, p, true)
+  }
+  
+  offsetHeight := height - startheight
+  
+  // Testnet retargets only every 12 blocks
+  if height % 12 != 0 {
+      var prev wire.BlockHeader
+      var err error
+  
+      // seek to n-1 header
+      _, err = r.Seek(int64(80*(offsetHeight-1)), os.SEEK_SET)
+      if err != nil {
+        return 0, err
+      }
+      // read in n-1
+      err = prev.Deserialize(r)
+      if err != nil {
+        return 0, err
+      }
+      
+      return prev.Bits, nil
+  }
+  
+  // Run KGW
+  return calcDiffAdjustKGW(r, height, startheight, p)
+}
+
 // MainNetParams defines the network parameters for the main Bitcoin network.
 var MainNetParams = Params{
 	Name:        "mainnet",
@@ -301,9 +441,7 @@ var MainNetParams = Params{
 	},
 
 	// Chain parameters
-  PoWFunction:		          func(b []byte, height int32) chainhash.Hash {
-                              return chainhash.DoubleHashH(b)
-                            },
+  PoWFunction:		          chainhash.DoubleHashH,
   DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
                               return diffBTC(r, height, startheight, p, false)
                             },
@@ -380,9 +518,7 @@ var RegressionNetParams = Params{
 	DNSSeeds:    []string{},
 
 	// Chain parameters
-  PoWFunction:		          func(b []byte, height int32) chainhash.Hash {
-                              return chainhash.DoubleHashH(b)
-                            },
+  PoWFunction:		          chainhash.DoubleHashH,
   DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
                               return diffBTC(r, height, startheight, p, false)
                             },
@@ -438,9 +574,7 @@ var BC2NetParams = Params{
 	DNSSeeds:    []string{},
 
 	// Chain parameters
-  PoWFunction:		          func(b []byte, height int32) chainhash.Hash {
-                              return chainhash.DoubleHashH(b)
-                            },
+  PoWFunction:		          chainhash.DoubleHashH,
   DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
                               return diffBTC(r, height, startheight, p, false)
                             },
@@ -500,7 +634,7 @@ var LiteCoinTestNet4Params = Params{
 	},
 
 	// Chain parameters
-  PoWFunction:              func(b []byte, height int32) chainhash.Hash {
+  PoWFunction:              func(b []byte) chainhash.Hash {
                               scryptBytes, _ := scrypt.Key(b, b, 1024, 1, 1, 32)
                               asChainHash, _ := chainhash.NewHash(scryptBytes)
                               return *asChainHash
@@ -566,9 +700,7 @@ var TestNet3Params = Params{
 	},
 
 	// Chain parameters
-  PoWFunction:              func(b []byte, height int32) chainhash.Hash {
-                              return chainhash.DoubleHashH(b)
-                            },
+  PoWFunction:              chainhash.DoubleHashH,
   DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
                               return diffBTC(r, height, startheight, p, false)
                             },
@@ -618,6 +750,65 @@ var TestNet3Params = Params{
 	HDCoinType: 1,
 }
 
+var VertcoinTestNetParams = Params{
+	Name:        "vtctest",
+	Net:         wire.VertTestNet,
+	DefaultPort: "15889",
+	DNSSeeds: []string{
+		"fr1.vtconline.org",
+	},
+
+	// Chain parameters
+  DiffCalcFunction:         diffVTCtest,
+	GenesisBlock:             &VertcoinTestnetGenesisBlock,
+	GenesisHash:              &VertcoinTestnetGenesisHash,
+	PowLimit:                 liteCoinTestNet4PowLimit,
+	PoWFunction:              func(b []byte) chainhash.Hash {
+                              lyraBytes, _ := lyra2rev2.Sum(b)
+                              asChainHash, _ := chainhash.NewHash(lyraBytes)
+                              return *asChainHash
+                            },
+	PowLimitBits:             0x1e0fffff,
+	CoinbaseMaturity:         120,
+	SubsidyReductionInterval: 840000,
+	TargetTimespan:           time.Second * 302400,    // 3.5 weeks
+	TargetTimePerBlock:       time.Second * 150, // 150 seconds
+	RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
+	ReduceMinDifficulty:      true,
+	MinDiffReductionTime:     time.Second * 150 * 2, // ?? unknown
+	GenerateSupported:        false,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{},
+
+	// Enforce current block version once majority of the network has
+	// upgraded.
+	// 51% (51 / 100)
+	// Reject previous block versions once a majority of the network has
+	// upgraded.
+	// 75% (75 / 100)
+	BlockEnforceNumRequired: 26,
+	BlockRejectNumRequired:  49,
+	BlockUpgradeNumToCheck:  50,
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Address encoding magics
+	PubKeyHashAddrID:        0x4a, // starts with m or n
+	ScriptHashAddrID:        0xc4, // starts with 2
+	Bech32Prefix:           "tvtc",
+	PrivateKeyID:            0xef, // starts with 9 7(uncompressed) or c (compressed)
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 65536, // i dunno, 0x010001 ?
+}
+
 // SimNetParams defines the network parameters for the simulation test Bitcoin
 // network.  This network is similar to the normal test network except it is
 // intended for private use within a group of individuals doing simulation
@@ -632,9 +823,7 @@ var SimNetParams = Params{
 	DNSSeeds:    []string{}, // NOTE: There must NOT be any seeds.
 
 	// Chain parameters
-  PoWFunction:              func(b []byte, height int32) chainhash.Hash {
-                              return chainhash.DoubleHashH(b)
-                            },
+  PoWFunction:              chainhash.DoubleHashH,
   DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
                               return diffBTC(r, height, startheight, p, false)
                             },
