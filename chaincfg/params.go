@@ -100,6 +100,9 @@ type Params struct {
   // This is needed for coins with variable retarget lookbacks that use 
   // StartHeader to offset the beginning of the header chain for SPV
   AssumeDiffBefore int32
+  
+  // Fee per byte for transactions
+  FeePerByte int64
 
 	// PowLimit defines the highest allowed proof of work value for a block
 	// as a uint256.
@@ -456,6 +459,7 @@ var MainNetParams = Params{
   DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
                               return diffBTC(r, height, startheight, p, false)
                             },
+  FeePerByte:               80,
 	GenesisBlock:             &genesisBlock,
 	GenesisHash:              &genesisHash,
 	PowLimit:                 mainPowLimit,
@@ -533,6 +537,7 @@ var RegressionNetParams = Params{
   DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
                               return diffBTC(r, height, startheight, p, false)
                             },
+  FeePerByte:               80,
 	GenesisBlock:             &regTestGenesisBlock,
 	GenesisHash:              &regTestGenesisHash,
 	PowLimit:                 regressionPowLimit,
@@ -589,6 +594,7 @@ var BC2NetParams = Params{
   DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
                               return diffBTC(r, height, startheight, p, false)
                             },
+  FeePerByte:               80,
 	GenesisBlock:             &bc2GenesisBlock,
 	GenesisHash:              &bc2GenesisHash,
 	PowLimit:                 bc2NetPowLimit,
@@ -656,6 +662,7 @@ var LiteCoinTestNet4Params = Params{
   StartHeader:              "010000000000000000000000000000000000000000000000000000000000000000000000d9ced4ed1130f7b7faad9be25323ffafa33232a17c3edf6cfd97bee6bafbdd97f60ba158f0ff0f1ee1790400",
   StartHeight:              48384,
   AssumeDiffBefore:         50401,
+  FeePerByte:               800,
 	GenesisBlock:             &bc2GenesisBlock, // no it's not
 	GenesisHash:              &liteCoinTestNet4GenesisHash,
 	PowLimit:                 liteCoinTestNet4PowLimit,
@@ -720,6 +727,7 @@ var TestNet3Params = Params{
                             },
   StartHeader:              "00000020da33925b1f7a55e9fa8e6c955a20ea094148b60c5c88f69a4f500000000000003673b7b6ce8157d3cfcaf415b6740918df7610a8769d70334aa9abd9c941b25e7621215880ba371a85bf9646",
   StartHeight:              1032192,
+  FeePerByte:               80,
 	GenesisBlock:             &testNet3GenesisBlock,
 	GenesisHash:              &testNet3GenesisHash,
 	PowLimit:                 testNet3PowLimit,
@@ -776,6 +784,7 @@ var VertcoinTestNetParams = Params{
 
 	// Chain parameters
   DiffCalcFunction:         diffVTCtest,
+  FeePerByte:               800,
 	GenesisBlock:             &VertcoinTestnetGenesisBlock,
 	GenesisHash:              &VertcoinTestnetGenesisHash,
 	PowLimit:                 liteCoinTestNet4PowLimit,
@@ -843,6 +852,7 @@ var VertcoinParams = Params{
   StartHeight:              598752,
   AssumeDiffBefore:         602784,
   DiffCalcFunction:         calcDiffAdjustKGW,
+  FeePerByte:               800,
 	GenesisBlock:             &VertcoinGenesisBlock,
 	GenesisHash:              &VertcoinGenesisHash,
 	PowLimit:                 liteCoinTestNet4PowLimit,
@@ -921,6 +931,7 @@ var SimNetParams = Params{
   DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
                               return diffBTC(r, height, startheight, p, false)
                             },
+  FeePerByte:               80,
 	GenesisBlock:             &simNetGenesisBlock,
 	GenesisHash:              &simNetGenesisHash,
 	PowLimit:                 simNetPowLimit,
@@ -981,7 +992,7 @@ var (
 )
 
 var (
-	registeredNets    = make(map[wire.BitcoinNet]struct{})
+	registeredNets    = make(map[uint32]struct{})
 	bech32Prefixes    = make(map[string]uint32)
 	pubKeyHashAddrIDs = make(map[byte]struct{})
 	scriptHashAddrIDs = make(map[byte]struct{})
@@ -998,10 +1009,10 @@ var (
 // parameters based on inputs and work regardless of the network being standard
 // or not.
 func Register(params *Params) error {
-	if _, ok := registeredNets[params.Net]; ok {
+	if _, ok := registeredNets[params.HDCoinType]; ok {
 		return ErrDuplicateNet
 	}
-	registeredNets[params.Net] = struct{}{}
+	registeredNets[params.HDCoinType] = struct{}{}
 	bech32Prefixes[params.Bech32Prefix] = params.HDCoinType
 	pubKeyHashAddrIDs[params.PubKeyHashAddrID] = struct{}{}
 	scriptHashAddrIDs[params.ScriptHashAddrID] = struct{}{}
@@ -1094,4 +1105,6 @@ func init() {
 	mustRegister(&SimNetParams)
 	mustRegister(&BC2NetParams)
 	mustRegister(&LiteCoinTestNet4Params)
+  mustRegister(&VertcoinTestNetParams)
+  mustRegister(&VertcoinParams)
 }
