@@ -582,7 +582,7 @@ var (
 )
 
 var (
-	registeredNets    = make(map[wire.BitcoinNet]struct{})
+	registeredNets    = make(map[uint32]struct{})
 	bech32Prefixes    = make(map[string]uint32)
 	pubKeyHashAddrIDs = make(map[byte]struct{})
 	scriptHashAddrIDs = make(map[byte]struct{})
@@ -599,10 +599,10 @@ var (
 // parameters based on inputs and work regardless of the network being standard
 // or not.
 func Register(params *Params) error {
-	if _, ok := registeredNets[params.Net]; ok {
+	if _, ok := registeredNets[params.HDCoinType]; ok {
 		return ErrDuplicateNet
 	}
-	registeredNets[params.Net] = struct{}{}
+	registeredNets[params.HDCoinType] = struct{}{}
 	bech32Prefixes[params.Bech32Prefix] = params.HDCoinType
 	pubKeyHashAddrIDs[params.PubKeyHashAddrID] = struct{}{}
 	scriptHashAddrIDs[params.ScriptHashAddrID] = struct{}{}
