@@ -234,60 +234,6 @@ var MainNetParams = Params{
 	HDCoinType: 0,
 }
 
-// RegressionNetParams defines the network parameters for the regression test
-// Bitcoin network.  Not to be confused with the test Bitcoin network (version
-// 3), this network is sometimes simply called "testnet".
-var RegressionNetParams = Params{
-	Name:        "regtest",
-	Net:         wire.TestNet,
-	DefaultPort: "18444",
-	DNSSeeds:    []string{},
-
-	// Chain parameters
-	GenesisBlock:             &regTestGenesisBlock,
-	GenesisHash:              &regTestGenesisHash,
-	PowLimit:                 regressionPowLimit,
-	PowLimitBits:             0x207fffff,
-	CoinbaseMaturity:         100,
-	SubsidyReductionInterval: 150,
-	TargetTimespan:           time.Hour * 24 * 14, // 14 days
-	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
-	RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
-	ReduceMinDifficulty:      true,
-	MinDiffReductionTime:     time.Minute * 20, // TargetTimePerBlock * 2
-	GenerateSupported:        true,
-
-	// Checkpoints ordered from oldest to newest.
-	Checkpoints: nil,
-
-	// Enforce current block version once majority of the network has
-	// upgraded.
-	// 75% (750 / 1000)
-	// Reject previous block versions once a majority of the network has
-	// upgraded.
-	// 95% (950 / 1000)
-	BlockEnforceNumRequired: 750,
-	BlockRejectNumRequired:  950,
-	BlockUpgradeNumToCheck:  1000,
-
-	// Mempool parameters
-	RelayNonStdTxs: true,
-
-	// Address encoding magics
-	PubKeyHashAddrID: 0x6f, // starts with m or n
-	ScriptHashAddrID: 0xc4, // starts with 2
-	PrivateKeyID:     0xef, // starts with 9 (uncompressed) or c (compressed)
-	Bech32Prefix:     "rt",
-
-	// BIP32 hierarchical deterministic extended key magics
-	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
-	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
-
-	// BIP44 coin type used in the hierarchical deterministic path for
-	// address generation.
-	HDCoinType: 257,
-}
-
 // BC2NetParams are the parameters for the BC2 test network.
 var BC2NetParams = Params{
 	Name:        "bc2",
@@ -394,6 +340,112 @@ var LiteCoinTestNet4Params = Params{
 	// BIP44 coin type used in the hierarchical deterministic path for
 	// address generation.
 	HDCoinType: 65537, // i dunno, 0x010001 ?
+}
+
+// LiteCoinTestNet4Params are the parameters for the litecoin test network 4.
+var LiteRegNetParams = Params{
+	Name:        "litereg",
+	Net:         wire.LiteRegNet,
+	DefaultPort: "19444",
+	DNSSeeds:    []string{},
+
+	// Chain parameters
+	GenesisBlock:             &liteCoinRegTestGenesisBlock, // no it's not
+	GenesisHash:              &liteCoinRegTestGenesisHash,
+	PowLimit:                 regressionPowLimit,
+	PowLimitBits:             0x207fffff,
+	CoinbaseMaturity:         100,
+	SubsidyReductionInterval: 150,
+	TargetTimespan:           time.Hour * 84,    // 84 hours (3.5 days)
+	TargetTimePerBlock:       time.Second * 150, // 150 seconds (2.5 min)
+	RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
+	ReduceMinDifficulty:      true,
+	MinDiffReductionTime:     time.Minute * 10, // ?? unknown
+	GenerateSupported:        true,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{},
+
+	// Enforce current block version once majority of the network has
+	// upgraded.
+	// 51% (51 / 100)
+	// Reject previous block versions once a majority of the network has
+	// upgraded.
+	// 75% (75 / 100)
+	BlockEnforceNumRequired: 51,
+	BlockRejectNumRequired:  75,
+	BlockUpgradeNumToCheck:  100,
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Address encoding magics
+	PubKeyHashAddrID: 0x6f, // starts with m or n
+	ScriptHashAddrID: 0xc4, // starts with 2
+	Bech32Prefix:     "rltc",
+	PrivateKeyID:     0xef, // starts with 9 7(uncompressed) or c (compressed)
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 258, // i dunno
+}
+
+// RegressionNetParams defines the network parameters for the regression test
+// Bitcoin network.  Not to be confused with the test Bitcoin network (version
+// 3), this network is sometimes simply called "testnet".
+var RegressionNetParams = Params{
+	Name:        "regtest",
+	Net:         wire.TestNet,
+	DefaultPort: "18444",
+	DNSSeeds:    []string{},
+
+	// Chain parameters
+	GenesisBlock:             &regTestGenesisBlock,
+	GenesisHash:              &regTestGenesisHash,
+	PowLimit:                 regressionPowLimit,
+	PowLimitBits:             0x207fffff,
+	CoinbaseMaturity:         100,
+	SubsidyReductionInterval: 150,
+	TargetTimespan:           time.Hour * 24 * 14, // 14 days
+	TargetTimePerBlock:       time.Minute * 10,    // 10 minutes
+	RetargetAdjustmentFactor: 4,                   // 25% less, 400% more
+	ReduceMinDifficulty:      true,
+	MinDiffReductionTime:     time.Minute * 20, // TargetTimePerBlock * 2
+	GenerateSupported:        true,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: nil,
+
+	// Enforce current block version once majority of the network has
+	// upgraded.
+	// 75% (750 / 1000)
+	// Reject previous block versions once a majority of the network has
+	// upgraded.
+	// 95% (950 / 1000)
+	BlockEnforceNumRequired: 750,
+	BlockRejectNumRequired:  950,
+	BlockUpgradeNumToCheck:  1000,
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Address encoding magics
+	PubKeyHashAddrID: 0x6f, // starts with m or n
+	ScriptHashAddrID: 0xc4, // starts with 2
+	PrivateKeyID:     0xef, // starts with 9 (uncompressed) or c (compressed)
+	Bech32Prefix:     "rt",
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 257,
 }
 
 // TestNet3Params defines the network parameters for the test Bitcoin network

@@ -171,6 +171,36 @@ var liteCoinTestNet4GenesisBlock = wire.MsgBlock{
 	//	Transactions: []*wire.MsgTx{&genesisCoinbaseTx}, // this is wrong... will it break?
 }
 
+// ==================== LiteRegNet
+
+// liteCoinRegTestGenesisHash is the first hash in litecoin regtest
+var liteCoinRegTestGenesisHash = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
+	0x06, 0x22, 0x6e, 0x46, 0x11, 0x1a, 0x0b, 0x59,
+	0xca, 0xaf, 0x12, 0x60, 0x43, 0xeb, 0x5b, 0xbf,
+	0x28, 0xc3, 0x4f, 0x3a, 0x5e, 0x33, 0x2a, 0x1f,
+	0xc7, 0xb2, 0xb7, 0x3c, 0xf1, 0x88, 0x91, 0x0f,
+})
+
+// is this the same...?
+var liteCoinRegTestMerkleRoot = chainhash.Hash([chainhash.HashSize]byte{ // Make go vet happy.
+	0xd9, 0xce, 0xd4, 0xed, 0x11, 0x30, 0xf7, 0xb7, 0xfa, 0xad, 0x9b, 0xe2,
+	0x53, 0x23, 0xff, 0xaf, 0xa3, 0x32, 0x32, 0xa1, 0x7c, 0x3e, 0xdf, 0x6c,
+	0xfd, 0x97, 0xbe, 0xe6, 0xba, 0xfb, 0xdd, 0x97,
+})
+
+// liteCoinTestNet4GenesisBlock has is like completely its own thing
+var liteCoinRegTestGenesisBlock = wire.MsgBlock{
+	Header: wire.BlockHeader{
+		Version:    1,
+		PrevBlock:  chainhash.Hash{}, // empty
+		MerkleRoot: liteCoinRegTestMerkleRoot,
+		Timestamp:  time.Unix(1296688602, 0), // later
+		Bits:       0x207fffff,
+		Nonce:      2,
+	},
+	//	Transactions: []*wire.MsgTx{&genesisCoinbaseTx}, // this is wrong... will it break?
+}
+
 // ================================= BC2
 
 // bc2GenesisHash is the hash of the first block in the block chain for the
