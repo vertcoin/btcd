@@ -825,6 +825,84 @@ var VertcoinTestNetParams = Params{
 	HDCoinType: 65536, // i dunno, 0x010001 ?
 }
 
+var VertcoinParams = Params{
+	Name:        "vtc",
+	Net:         wire.VertcoinNet,
+	DefaultPort: "5889",
+	DNSSeeds: []string{
+		"fr1.vtconline.org",
+    "uk1.vtconline.org",
+    "useast1.vtconline.org",
+    "vtc.alwayshashing.com",
+    "crypto.office-on-the.net",
+    "p2pool.kosmoplovci.org",
+	},
+
+	// Chain parameters
+  StartHeader:              "0200000036dc16c771631c52a43db7b0a9869595ed7dc168e72eaf0f550802989f5c7be437a6907666a7ba5575d88ac5140186118e34e24a047b9d6e9641bb29e204cb493c5308583ff44d1b42226e8a",
+  StartHeight:              598752,
+  AssumeDiffBefore:         602784,
+  DiffCalcFunction:         calcDiffAdjustKGW,
+	GenesisBlock:             &VertcoinGenesisBlock,
+	GenesisHash:              &VertcoinGenesisHash,
+	PowLimit:                 liteCoinTestNet4PowLimit,
+	PoWFunction:              func(b []byte) chainhash.Hash {
+                                lyraBytes, _ := lyra2rev2.Sum(b)
+                                asChainHash, _ := chainhash.NewHash(lyraBytes)
+                                return *asChainHash
+                            },
+	PowLimitBits:             0x1e0fffff,
+	CoinbaseMaturity:         120,
+	SubsidyReductionInterval: 840000,
+	TargetTimespan:           time.Second * 302400,    // 3.5 weeks
+	TargetTimePerBlock:       time.Second * 150, // 150 seconds
+	RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
+	ReduceMinDifficulty:      false,
+	MinDiffReductionTime:     time.Second * 150 * 2, // ?? unknown
+	GenerateSupported:        false,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{
+    {  0,      newHashFromStr("4d96a915f49d40b1e5c2844d1ee2dccb90013a990ccea12c492d22110489f0c4")},
+    {  24200,  newHashFromStr("d7ed819858011474c8b0cae4ad0b9bdbb745becc4c386bc22d1220cc5a4d1787")},
+    {  65000,  newHashFromStr("9e673a69c35a423f736ab66f9a195d7c42f979847a729c0f3cef2c0b8b9d0289")},
+    {  84065,  newHashFromStr("a904170a5a98109b2909379d9bc03ef97a6b44d5dafbc9084b8699b0cba5aa98")},
+    {  228023, newHashFromStr("15c94667a9e941359d2ee6527e2876db1b5e7510a5ded3885ca02e7e0f516b51")},
+    {  346992, newHashFromStr("f1714fa4c7990f4b3d472eb22132891ccd3c7ad7208e2d1ab15bde68854fb0ee")},
+    {  347269, newHashFromStr("fa1e592b7ea2aa97c5f20ccd7c40f3aaaeb31d1232c978847a79f28f83b6c22a")},
+    {  430000, newHashFromStr("2f5703cf7b6f956b84fd49948cbf49dc164cfcb5a7b55903b1c4f53bc7851611")},
+    {  516999, newHashFromStr("572ed47da461743bcae526542053e7bc532de299345e4f51d77786f2870b7b28")},
+	  {  627610, newHashFromStr("6000a787f2d8bb77d4f491a423241a4cc8439d862ca6cec6851aba4c79ccfedc")},
+  },
+
+	// Enforce current block version once majority of the network has
+	// upgraded.
+	// 51% (51 / 100)
+	// Reject previous block versions once a majority of the network has
+	// upgraded.
+	// 75% (75 / 100)
+	BlockEnforceNumRequired: 1512,
+	BlockRejectNumRequired:  1915,
+	BlockUpgradeNumToCheck:  2016,
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Address encoding magics
+	PubKeyHashAddrID:        0x47, // starts with m or n
+	ScriptHashAddrID:        0x05, // starts with 2
+	Bech32Prefix:           "vtc",
+	PrivateKeyID:            0x80, // starts with 9 7(uncompressed) or c (compressed)
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 28, // i dunno, 0x010001 ?
+}
+
 // SimNetParams defines the network parameters for the simulation test Bitcoin
 // network.  This network is similar to the normal test network except it is
 // intended for private use within a group of individuals doing simulation
