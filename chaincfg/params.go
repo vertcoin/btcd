@@ -695,4 +695,5 @@ func init() {
 	mustRegister(&SimNetParams)
 	mustRegister(&BC2NetParams)
 	mustRegister(&LiteCoinTestNet4Params)
+	mustRegister(&LiteRegNetParams)
 }
