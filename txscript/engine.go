@@ -351,12 +351,14 @@ func (vm *Engine) CheckErrorCondition(finalScript bool) error {
 	}
 	if v == false {
 		// Log interesting data.
-		log.Tracef("%v", newLogClosure(func() string {
-			dis0, _ := vm.DisasmScript(0)
-			dis1, _ := vm.DisasmScript(1)
-			return fmt.Sprintf("scripts failed: script0: %s\n"+
-				"script1: %s", dis0, dis1)
-		}))
+		/*
+			log.Tracef("%v", newLogClosure(func() string {
+				dis0, _ := vm.DisasmScript(0)
+				dis1, _ := vm.DisasmScript(1)
+				return fmt.Sprintf("scripts failed: script0: %s\n"+
+					"script1: %s", dis0, dis1)
+			}))
+		*/
 		return ErrStackScriptFailed
 	}
 	return nil
@@ -454,31 +456,33 @@ func (vm *Engine) Step() (done bool, err error) {
 func (vm *Engine) Execute() (err error) {
 	done := false
 	for done != true {
-		log.Tracef("%v", newLogClosure(func() string {
-			dis, err := vm.DisasmPC()
-			if err != nil {
-				return fmt.Sprintf("stepping (%v)", err)
-			}
-			return fmt.Sprintf("stepping %v", dis)
-		}))
+		/*		log.Tracef("%v", newLogClosure(func() string {
+					dis, err := vm.DisasmPC()
+					if err != nil {
+						return fmt.Sprintf("stepping (%v)", err)
+					}
+					return fmt.Sprintf("stepping %v", dis)
+				}))
+		*/
 
 		done, err = vm.Step()
 		if err != nil {
 			return err
 		}
-		log.Tracef("%v", newLogClosure(func() string {
-			var dstr, astr string
+		/*		log.Tracef("%v", newLogClosure(func() string {
+					var dstr, astr string
 
-			// if we're tracing, dump the stacks.
-			if vm.dstack.Depth() != 0 {
-				dstr = "Stack:\n" + vm.dstack.String()
-			}
-			if vm.astack.Depth() != 0 {
-				astr = "AltStack:\n" + vm.astack.String()
-			}
+					// if we're tracing, dump the stacks.
+					if vm.dstack.Depth() != 0 {
+						dstr = "Stack:\n" + vm.dstack.String()
+					}
+					if vm.astack.Depth() != 0 {
+						astr = "AltStack:\n" + vm.astack.String()
+					}
 
-			return dstr + astr
-		}))
+					return dstr + astr
+				}))
+		*/
 	}
 
 	return vm.CheckErrorCondition(true)

@@ -4,17 +4,12 @@
 
 package txscript
 
-import (
-	"errors"
-	"io"
-
-	"github.com/btcsuite/btclog"
-)
+import "io"
 
 // log is a logger that is initialized with no output filters.  This
 // means the package will not perform any logging by default until the caller
 // requests it.
-var log btclog.Logger
+// var log btclog.Logger
 
 // The default amount of logging is none.
 func init() {
@@ -24,14 +19,14 @@ func init() {
 // DisableLog disables all library log output.  Logging output is disabled
 // by default until either UseLogger or SetLogWriter are called.
 func DisableLog() {
-	log = btclog.Disabled
+	//	log = btclog.Disabled
 }
 
 // UseLogger uses a specified Logger to output package logging info.
 // This should be used in preference to SetLogWriter if the caller is also
 // using btclog.
-func UseLogger(logger btclog.Logger) {
-	log = logger
+func UseLogger() { //logger btclog.Logger) {
+	//	log = logger
 }
 
 // SetLogWriter uses a specified io.Writer to output package logging info.
@@ -39,7 +34,7 @@ func UseLogger(logger btclog.Logger) {
 // dependency on seelog.  If the caller is also using btclog, UseLogger should
 // be used instead.
 func SetLogWriter(w io.Writer, level string) error {
-	if w == nil {
+	/*if w == nil {
 		return errors.New("nil writer")
 	}
 
@@ -53,7 +48,7 @@ func SetLogWriter(w io.Writer, level string) error {
 		return err
 	}
 
-	UseLogger(l)
+	UseLogger(l) */
 	return nil
 }
 
