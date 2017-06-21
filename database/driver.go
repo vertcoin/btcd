@@ -4,11 +4,7 @@
 
 package database
 
-import (
-	"fmt"
-
-	"github.com/btcsuite/btclog"
-)
+import "fmt"
 
 // Driver defines a structure for backend drivers to use when they registered
 // themselves as a backend which implements the DB interface.
@@ -28,7 +24,7 @@ type Driver struct {
 	Open func(args ...interface{}) (DB, error)
 
 	// UseLogger uses a specified Logger to output package logging info.
-	UseLogger func(logger btclog.Logger)
+	UseLogger func() //)
 }
 
 // driverList holds all of the registered database backends.
