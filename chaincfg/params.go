@@ -11,6 +11,8 @@ import (
 	"time"
         "io"
         "os"
+        "log"
+        "math"
 
 	"github.com/adiabat/btcd/chaincfg/chainhash"
         "github.com/adiabat/btcd/chaincfg/difficulty"
@@ -77,12 +79,32 @@ type Params struct {
 	// DNSSeeds defines a list of DNS seeds for the network that are used
 	// as one method to discover peers.
 	DNSSeeds []string
+  
+  // The function used to calculate the proof of work value for a block
+	PoWFunction func(b []byte) chainhash.Hash
+  
+  // The function used to calculate the difficulty of a given block
+  DiffCalcFunction func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error)
 
 	// GenesisBlock defines the first block of the chain.
 	GenesisBlock *wire.MsgBlock
 
 	// GenesisHash is the starting block hash.
 	GenesisHash *chainhash.Hash
+  
+  // The block header to start downloading blocks from
+  StartHeader string
+  
+  // The height of the StartHash
+  StartHeight int32
+  
+  // Assume the difficulty bits are valid before this header height
+  // This is needed for coins with variable retarget lookbacks that use 
+  // StartHeader to offset the beginning of the header chain for SPV
+  AssumeDiffBefore int32
+  
+  // Fee per byte for transactions
+  FeePerByte int64
 
 	// The function used to calculate the proof of work value for a block
 	PoWFunction func(b []byte) chainhash.Hash
@@ -191,7 +213,7 @@ func calcDiffAdjustBitcoin(start, end wire.BlockHeader, p *Params) uint32 {
 	// divided by 2 weeks
 	newTarget.Div(newTarget, big.NewInt(int64(p.TargetTimespan / time.Second)))
 
-  powLimit := difficulty.CompactToBig(p.PowLimitBits)
+        powLimit := difficulty.CompactToBig(p.PowLimitBits)
   
 	// clip again if above minimum target (too easy)
 	if newTarget.Cmp(powLimit) > 0 {
@@ -329,6 +351,104 @@ func LTCDiff (r io.ReadSeeker, height, startheight int32, p *Params) (uint32, er
     if p.ReduceMinDifficulty && cur.Timestamp.After(
       prev.Timestamp.Add(p.TargetTimePerBlock*2)) {
       rightBits = p.PowLimitBits // difficulty 1
+=======
+	prevTarget := CompactToBig(end.Bits)
+	// new target is old * duration...
+	newTarget := new(big.Int).Mul(prevTarget, big.NewInt(duration))
+	// divided by 2 weeks
+	newTarget.Div(newTarget, big.NewInt(int64(p.TargetTimespan.Seconds())))
+
+	// clip again if above minimum target (too easy)
+	if newTarget.Cmp(p.PowLimit) > 0 {
+		newTarget.Set(p.PowLimit)
+	}
+
+	// calculate and return 4-byte 'bits' difficulty from 32-byte target
+	return BigToCompact(newTarget)
+}
+
+func diffBTC(r io.ReadSeeker, height, startheight int32, p *Params, ltc bool) (uint32, error) {
+  epochLength := int32(p.TargetTimespan / p.TargetTimePerBlock)
+	var err error
+	var cur, prev wire.BlockHeader
+  
+  offsetHeight := height - startheight
+	// seek to n-1 header
+	_, err = r.Seek(int64(80*(offsetHeight-1)), os.SEEK_SET)
+	if err != nil {
+		log.Printf(err.Error())
+		return 0, err
+	}  
+	// read in n-1
+	err = prev.Deserialize(r)
+	if err != nil {
+		log.Printf(err.Error())
+		return 0, err
+	}
+	// seek to curHeight header and read in
+	_, err = r.Seek(int64(80*(offsetHeight)), os.SEEK_SET)
+	if err != nil {
+		log.Printf(err.Error())
+		return 0, err
+	}
+	err = cur.Deserialize(r)
+	if err != nil {
+		log.Printf(err.Error())
+		return 0, err
+	}
+  
+  rightBits := prev.Bits // normal, no adjustment; Dn = Dn-1
+	// see if we're on a difficulty adjustment block
+	if (height)%epochLength == 0 {
+    var epochStart wire.BlockHeader
+    if ltc {
+      if height == epochLength {
+        _, err = r.Seek(int64(80*(offsetHeight-epochLength)), os.SEEK_SET)
+      } else {
+        _, err = r.Seek(int64(80*(offsetHeight-epochLength-1)), os.SEEK_SET)
+      }
+    } else {
+      _, err = r.Seek(int64(80*(offsetHeight-epochLength)), os.SEEK_SET)
+    }
+    if err != nil {
+      log.Printf(err.Error())
+      return 0, err
+    }
+    err = epochStart.Deserialize(r)
+    if err != nil {
+      log.Printf(err.Error())
+      return 0, err
+    }
+		// if so, check if difficulty adjustment is valid.
+		// That whole "controlled supply" thing.
+		// calculate diff n based on n-2016 ... n-1
+		rightBits = calcDiffAdjustBitcoin(epochStart, prev, p)
+	} else { // not a new epoch
+		// if on testnet, check for difficulty nerfing
+		if p.ReduceMinDifficulty && cur.Timestamp.After(
+			prev.Timestamp.Add(p.TargetTimePerBlock*2)) {
+			rightBits = p.PowLimitBits // difficulty 1
+		} else {
+    
+      // Get last non-nerfed header
+      curHeight := offsetHeight
+      curHeader := prev
+      for curHeight % epochLength != 0 && curHeader.Bits == p.PowLimitBits && curHeight >= 0 {
+        curHeight--
+        _, err = r.Seek(int64(80*curHeight), os.SEEK_SET)
+        if err != nil {
+          log.Printf(err.Error())
+          return 0, err
+        }
+        err = curHeader.Deserialize(r)
+        if err != nil {
+          log.Printf(err.Error())
+          return 0, err
+        }
+      }
+      
+      rightBits = curHeader.Bits
+>>>>>>> origin/multiwal
     }
   }
   
@@ -372,7 +492,11 @@ func calcDiffAdjustKGW(r io.ReadSeeker, height, startheight int32, p *Params) (u
   
   var i int32
   
+<<<<<<< HEAD
   for i = 1; currentHeight != 1; i++ {
+=======
+  for i = 1; currentHeight > 0; i++ {
+>>>>>>> origin/multiwal
     if i > maxBlocks {
       break
     }
@@ -380,9 +504,15 @@ func calcDiffAdjustKGW(r io.ReadSeeker, height, startheight int32, p *Params) (u
     blocksScanned++
     
     if i == 1 {
+<<<<<<< HEAD
       difficultyAverage = *difficulty.CompactToBig(currentBlock.Bits)
     } else {
       compact := difficulty.CompactToBig(currentBlock.Bits)
+=======
+      difficultyAverage = *CompactToBig(currentBlock.Bits)
+    } else {
+      compact := CompactToBig(currentBlock.Bits)
+>>>>>>> origin/multiwal
       
       difference  := new(big.Int).Sub(compact, &previousDifficultyAverage)
       difference.Div(difference, big.NewInt(int64(i)))
@@ -412,7 +542,11 @@ func calcDiffAdjustKGW(r io.ReadSeeker, height, startheight int32, p *Params) (u
       break
     }
     
+<<<<<<< HEAD
     if currentHeight < 1 {
+=======
+    if currentHeight <= 1 {
+>>>>>>> origin/multiwal
       break
     }
     
@@ -440,12 +574,21 @@ func calcDiffAdjustKGW(r io.ReadSeeker, height, startheight int32, p *Params) (u
     newTarget = *p.PowLimit
   }
   
+<<<<<<< HEAD
   return difficulty.BigToCompact(&newTarget), nil
 }
 
 func VTCTestDiff (r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
   if height < 2116 {
       return LTCDiff(r, height, startheight, p)
+=======
+  return BigToCompact(&newTarget), nil
+}
+
+func diffVTCtest(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+  if height < 2116 {
+      return diffBTC(r, height, startheight, p, true)
+>>>>>>> origin/multiwal
   }
   
   offsetHeight := height - startheight
@@ -489,6 +632,11 @@ var MainNetParams = Params{
 	},
 
 	// Chain parameters
+  PoWFunction:		          chainhash.DoubleHashH,
+  DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+                              return diffBTC(r, height, startheight, p, false)
+                            },
+  FeePerByte:               80,
 	GenesisBlock:             &genesisBlock,
 	GenesisHash:              &genesisHash,
   DiffCalcFunction:         BTCDiff,
@@ -563,6 +711,11 @@ var RegressionNetParams = Params{
 	DNSSeeds:    []string{},
 
 	// Chain parameters
+  PoWFunction:		          chainhash.DoubleHashH,
+  DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+                              return diffBTC(r, height, startheight, p, false)
+                            },
+  FeePerByte:               80,
 	GenesisBlock:             &regTestGenesisBlock,
 	GenesisHash:              &regTestGenesisHash,
 	PoWFunction:              chainhash.DoubleHashH,
@@ -617,8 +770,16 @@ var BC2NetParams = Params{
 	DNSSeeds:    []string{},
 
 	// Chain parameters
+<<<<<<< HEAD
 	PoWFunction:              chainhash.DoubleHashH,
   DiffCalcFunction:         BTCDiff,
+=======
+  PoWFunction:		          chainhash.DoubleHashH,
+  DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+                              return diffBTC(r, height, startheight, p, false)
+                            },
+  FeePerByte:               80,
+>>>>>>> origin/multiwal
 	GenesisBlock:             &bc2GenesisBlock,
 	GenesisHash:              &bc2GenesisHash,
 	PowLimit:                 bc2NetPowLimit,
@@ -735,7 +896,22 @@ var LiteCoinTestNet4Params = Params{
 	},
 
 	// Chain parameters
+<<<<<<< HEAD
   DiffCalcFunction:         LTCDiff,
+=======
+  PoWFunction:              func(b []byte) chainhash.Hash {
+                              scryptBytes, _ := scrypt.Key(b, b, 1024, 1, 1, 32)
+                              asChainHash, _ := chainhash.NewHash(scryptBytes)
+                              return *asChainHash
+                            },
+  DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+                              return diffBTC(r, height, startheight, p, true)
+                            },
+  StartHeader:              "010000000000000000000000000000000000000000000000000000000000000000000000d9ced4ed1130f7b7faad9be25323ffafa33232a17c3edf6cfd97bee6bafbdd97f60ba158f0ff0f1ee1790400",
+  StartHeight:              48384,
+  AssumeDiffBefore:         50401,
+  FeePerByte:               800,
+>>>>>>> origin/multiwal
 	GenesisBlock:             &bc2GenesisBlock, // no it's not
 	GenesisHash:              &liteCoinTestNet4GenesisHash,
 	PoWFunction:              func(b []byte) chainhash.Hash {
@@ -751,7 +927,7 @@ var LiteCoinTestNet4Params = Params{
 	TargetTimePerBlock:       time.Second * 150, // 150 seconds
 	RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
 	ReduceMinDifficulty:      true,
-	MinDiffReductionTime:     time.Minute * 10, // ?? unknown
+	MinDiffReductionTime:     time.Second * 150 * 2, // TargetTimePerBlock * 2
 	GenerateSupported:        false,
 
 	// Checkpoints ordered from oldest to newest.
@@ -905,7 +1081,17 @@ var TestNet3Params = Params{
 	},
 
 	// Chain parameters
+<<<<<<< HEAD
   DiffCalcFunction:         BTCDiff,
+=======
+  PoWFunction:              chainhash.DoubleHashH,
+  DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+                              return diffBTC(r, height, startheight, p, false)
+                            },
+  StartHeader:              "00000020da33925b1f7a55e9fa8e6c955a20ea094148b60c5c88f69a4f500000000000003673b7b6ce8157d3cfcaf415b6740918df7610a8769d70334aa9abd9c941b25e7621215880ba371a85bf9646",
+  StartHeight:              1032192,
+  FeePerByte:               80,
+>>>>>>> origin/multiwal
 	GenesisBlock:             &testNet3GenesisBlock,
 	GenesisHash:              &testNet3GenesisHash,
 	PoWFunction:              chainhash.DoubleHashH,
@@ -953,6 +1139,145 @@ var TestNet3Params = Params{
 	HDCoinType: 1,
 }
 
+var VertcoinTestNetParams = Params{
+	Name:        "vtctest",
+	Net:         wire.VertTestNet,
+	DefaultPort: "15889",
+	DNSSeeds: []string{
+		"fr1.vtconline.org",
+	},
+
+	// Chain parameters
+  DiffCalcFunction:         diffVTCtest,
+  FeePerByte:               800,
+	GenesisBlock:             &VertcoinTestnetGenesisBlock,
+	GenesisHash:              &VertcoinTestnetGenesisHash,
+	PowLimit:                 liteCoinTestNet4PowLimit,
+	PoWFunction:              func(b []byte) chainhash.Hash {
+                              lyraBytes, _ := lyra2rev2.Sum(b)
+                              asChainHash, _ := chainhash.NewHash(lyraBytes)
+                              return *asChainHash
+                            },
+	PowLimitBits:             0x1e0fffff,
+	CoinbaseMaturity:         120,
+	SubsidyReductionInterval: 840000,
+	TargetTimespan:           time.Second * 302400,    // 3.5 weeks
+	TargetTimePerBlock:       time.Second * 150, // 150 seconds
+	RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
+	ReduceMinDifficulty:      true,
+	MinDiffReductionTime:     time.Second * 150 * 2, // ?? unknown
+	GenerateSupported:        false,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{},
+
+	// Enforce current block version once majority of the network has
+	// upgraded.
+	// 51% (51 / 100)
+	// Reject previous block versions once a majority of the network has
+	// upgraded.
+	// 75% (75 / 100)
+	BlockEnforceNumRequired: 26,
+	BlockRejectNumRequired:  49,
+	BlockUpgradeNumToCheck:  50,
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Address encoding magics
+	PubKeyHashAddrID:        0x4a, // starts with m or n
+	ScriptHashAddrID:        0xc4, // starts with 2
+	Bech32Prefix:           "tvtc",
+	PrivateKeyID:            0xef, // starts with 9 7(uncompressed) or c (compressed)
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 65536, // i dunno, 0x010001 ?
+}
+
+var VertcoinParams = Params{
+	Name:        "vtc",
+	Net:         wire.VertcoinNet,
+	DefaultPort: "5889",
+	DNSSeeds: []string{
+		"fr1.vtconline.org",
+    "uk1.vtconline.org",
+    "useast1.vtconline.org",
+    "vtc.alwayshashing.com",
+    "crypto.office-on-the.net",
+    "p2pool.kosmoplovci.org",
+	},
+
+	// Chain parameters
+  StartHeader:              "0200000036dc16c771631c52a43db7b0a9869595ed7dc168e72eaf0f550802989f5c7be437a6907666a7ba5575d88ac5140186118e34e24a047b9d6e9641bb29e204cb493c5308583ff44d1b42226e8a",
+  StartHeight:              598752,
+  AssumeDiffBefore:         602784,
+  DiffCalcFunction:         calcDiffAdjustKGW,
+  FeePerByte:               800,
+	GenesisBlock:             &VertcoinGenesisBlock,
+	GenesisHash:              &VertcoinGenesisHash,
+	PowLimit:                 liteCoinTestNet4PowLimit,
+	PoWFunction:              func(b []byte) chainhash.Hash {
+                                lyraBytes, _ := lyra2rev2.Sum(b)
+                                asChainHash, _ := chainhash.NewHash(lyraBytes)
+                                return *asChainHash
+                            },
+	PowLimitBits:             0x1e0fffff,
+	CoinbaseMaturity:         120,
+	SubsidyReductionInterval: 840000,
+	TargetTimespan:           time.Second * 302400,    // 3.5 weeks
+	TargetTimePerBlock:       time.Second * 150, // 150 seconds
+	RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
+	ReduceMinDifficulty:      false,
+	MinDiffReductionTime:     time.Second * 150 * 2, // ?? unknown
+	GenerateSupported:        false,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{
+    {  0,      newHashFromStr("4d96a915f49d40b1e5c2844d1ee2dccb90013a990ccea12c492d22110489f0c4")},
+    {  24200,  newHashFromStr("d7ed819858011474c8b0cae4ad0b9bdbb745becc4c386bc22d1220cc5a4d1787")},
+    {  65000,  newHashFromStr("9e673a69c35a423f736ab66f9a195d7c42f979847a729c0f3cef2c0b8b9d0289")},
+    {  84065,  newHashFromStr("a904170a5a98109b2909379d9bc03ef97a6b44d5dafbc9084b8699b0cba5aa98")},
+    {  228023, newHashFromStr("15c94667a9e941359d2ee6527e2876db1b5e7510a5ded3885ca02e7e0f516b51")},
+    {  346992, newHashFromStr("f1714fa4c7990f4b3d472eb22132891ccd3c7ad7208e2d1ab15bde68854fb0ee")},
+    {  347269, newHashFromStr("fa1e592b7ea2aa97c5f20ccd7c40f3aaaeb31d1232c978847a79f28f83b6c22a")},
+    {  430000, newHashFromStr("2f5703cf7b6f956b84fd49948cbf49dc164cfcb5a7b55903b1c4f53bc7851611")},
+    {  516999, newHashFromStr("572ed47da461743bcae526542053e7bc532de299345e4f51d77786f2870b7b28")},
+	  {  627610, newHashFromStr("6000a787f2d8bb77d4f491a423241a4cc8439d862ca6cec6851aba4c79ccfedc")},
+  },
+
+	// Enforce current block version once majority of the network has
+	// upgraded.
+	// 51% (51 / 100)
+	// Reject previous block versions once a majority of the network has
+	// upgraded.
+	// 75% (75 / 100)
+	BlockEnforceNumRequired: 1512,
+	BlockRejectNumRequired:  1915,
+	BlockUpgradeNumToCheck:  2016,
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Address encoding magics
+	PubKeyHashAddrID:        0x47, // starts with m or n
+	ScriptHashAddrID:        0x05, // starts with 2
+	Bech32Prefix:           "vtc",
+	PrivateKeyID:            0x80, // starts with 9 7(uncompressed) or c (compressed)
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 28, // i dunno, 0x010001 ?
+}
+
 // SimNetParams defines the network parameters for the simulation test Bitcoin
 // network.  This network is similar to the normal test network except it is
 // intended for private use within a group of individuals doing simulation
@@ -967,7 +1292,15 @@ var SimNetParams = Params{
 	DNSSeeds:    []string{}, // NOTE: There must NOT be any seeds.
 
 	// Chain parameters
+<<<<<<< HEAD
   DiffCalcFunction:         BTCDiff,
+=======
+  PoWFunction:              chainhash.DoubleHashH,
+  DiffCalcFunction:         func(r io.ReadSeeker, height, startheight int32, p *Params) (uint32, error) {
+                              return diffBTC(r, height, startheight, p, false)
+                            },
+  FeePerByte:               80,
+>>>>>>> origin/multiwal
 	GenesisBlock:             &simNetGenesisBlock,
 	GenesisHash:              &simNetGenesisHash,
 	PoWFunction:              chainhash.DoubleHashH,
@@ -1142,5 +1475,10 @@ func init() {
 	mustRegister(&SimNetParams)
 	mustRegister(&BC2NetParams)
 	mustRegister(&LiteCoinTestNet4Params)
+<<<<<<< HEAD
 	mustRegister(&LiteRegNetParams)
+=======
+  mustRegister(&VertcoinTestNetParams)
+  mustRegister(&VertcoinParams)
+>>>>>>> origin/multiwal
 }

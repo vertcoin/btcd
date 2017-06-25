@@ -141,6 +141,9 @@ const (
 	
 	// VertcoinTestNet is the version test network
 	VertTestNet BitcoinNet = 0x74726576
+  
+    // VertcoinNet is the vertcoin main network
+	VertcoinNet BitcoinNet = 0xdab5bffa
 )
 
 // bnStrings is a map of bitcoin networks back to their constant names for
