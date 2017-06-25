@@ -138,6 +138,9 @@ const (
 
 	// LiteRegNet is the litecoin regression test network (disticnt from testnet4)
 	LiteRegNet BitcoinNet = 0xdab5bffa
+	
+	// VertcoinTestNet is the version test network
+	VertTestNet BitcoinNet = 0x74726576
 )
 
 // bnStrings is a map of bitcoin networks back to their constant names for
