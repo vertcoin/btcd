@@ -5,7 +5,7 @@
 package blockchain
 
 import (
-	"errors"
+	//"errors"
 	"io"
 
 	"github.com/btcsuite/btclog"
@@ -39,7 +39,7 @@ func UseLogger(logger btclog.Logger) {
 // dependency on seelog.  If the caller is also using btclog, UseLogger should
 // be used instead.
 func SetLogWriter(w io.Writer, level string) error {
-	if w == nil {
+	/*if w == nil {
 		return errors.New("nil writer")
 	}
 
@@ -53,7 +53,7 @@ func SetLogWriter(w io.Writer, level string) error {
 		return err
 	}
 
-	UseLogger(l)
+	UseLogger(l)*/
 	return nil
 }
 
