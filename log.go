@@ -176,17 +176,8 @@ func setLogLevel(subsystemID string, logLevel string) {
 		return
 	}
 
-	// Default to info if the log level is invalid.
-	level, ok := btclog.LogLevelFromString(logLevel)
-	if !ok {
-		level = btclog.InfoLvl
-	}
-
-	// Create new logger for the subsystem if needed.
-	if logger == btclog.Disabled {
-		logger = btclog.NewSubsystemLogger(backendLog, subsystemID+": ")
-		useLogger(subsystemID, logger)
-	}
+	// Defaults to info if the log level is invalid.
+	level, _ := btclog.LevelFromString(logLevel)
 	logger.SetLevel(level)
 }
 
