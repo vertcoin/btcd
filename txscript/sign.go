@@ -37,6 +37,31 @@ func RawTxInWitnessSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
 	return append(signature.Serialize(), byte(hashType)), nil
 }
 
+// RawTxInBCHSignature returns a BCH signature for the input idx of
+// the given transaction, with hashType appended to it.
+// Similar to RawTxInWitnessSignature / BIP0143 but hashType is hardcoded
+func RawTxInBCHSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
+	amt int64, subScript []byte, key *btcec.PrivateKey) ([]byte, error) {
+
+	// for BCH sigs
+	var SigHashBCHAll SigHashType = 0x41
+	hashType := SigHashBCHAll
+
+	parsedScript, err := ParseScript(subScript)
+	if err != nil {
+		return nil, fmt.Errorf("cannot parse output script: %v", err)
+	}
+
+	hash := CalcWitnessSignatureHash(parsedScript, sigHashes, hashType, tx,
+		idx, amt)
+	signature, err := key.Sign(hash)
+	if err != nil {
+		return nil, fmt.Errorf("cannot sign tx input: %s", err)
+	}
+
+	return append(signature.Serialize(), byte(hashType)), nil
+}
+
 // WitnessSignatureScript creates an input witness stack for tx to spend BTC
 // sent from a previous output to the owner of privKey using the p2wkh script
 // template. The passed transaction must contain all the inputs and outputs as
