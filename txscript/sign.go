@@ -62,6 +62,27 @@ func RawTxInBCHSignature(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int,
 	return append(signature.Serialize(), byte(hashType)), nil
 }
 
+// BCHSignatureScript is like WitnessScript but for BCH signatures.
+func BCHSignatureScript(tx *wire.MsgTx, sigHashes *TxSigHashes, idx int, amt int64,
+	subscript []byte, privKey *btcec.PrivateKey, compress bool) ([]byte, error) {
+
+	sig, err := RawTxInBCHSignature(tx, sigHashes, idx, amt, subscript, privKey)
+	if err != nil {
+		return nil, err
+	}
+
+	pk := (*btcec.PublicKey)(&privKey.PublicKey)
+	var pkData []byte
+	if compress {
+		pkData = pk.SerializeCompressed()
+	} else {
+		pkData = pk.SerializeUncompressed()
+	}
+
+	// It's not a stack, it's just one sig script like before
+	return NewScriptBuilder().AddData(sig).AddData(pkData).Script()
+}
+
 // WitnessSignatureScript creates an input witness stack for tx to spend BTC
 // sent from a previous output to the owner of privKey using the p2wkh script
 // template. The passed transaction must contain all the inputs and outputs as
