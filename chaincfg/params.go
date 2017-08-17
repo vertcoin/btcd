@@ -565,6 +565,115 @@ var SimNetParams = Params{
 	HDCoinType: 115, // ASCII for s
 }
 
+var VertcoinTestNetParams = Params{
+	Name:        "vtctest",
+	DefaultPort: "15889",
+	DNSSeeds: []string{
+		"fr1.vtconline.org",
+	},
+
+	// Chain parameters
+  
+	GenesisBlock:             &simNetGenesisBlock,
+	GenesisHash:              &genesisHash,
+	PowLimit:                 liteCoinTestNet4PowLimit,
+	PowLimitBits:             0x1e0fffff,
+	CoinbaseMaturity:         120,
+	SubsidyReductionInterval: 840000,
+	TargetTimespan:           time.Second * 302400,    // 3.5 weeks
+	TargetTimePerBlock:       time.Second * 150, // 150 seconds
+	RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
+	ReduceMinDifficulty:      true,
+	MinDiffReductionTime:     time.Second * 150 * 2, // ?? unknown
+	GenerateSupported:        false,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{},
+
+	BlockEnforceNumRequired: 26,
+	BlockRejectNumRequired:  49,
+	BlockUpgradeNumToCheck:  50,
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Address encoding magics
+	PubKeyHashAddrID:        0x4a, // starts with X or W
+	ScriptHashAddrID:        0xc4,
+	Bech32Prefix:           "tvtc",
+	PrivateKeyID:            0xef, 
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 65536, 
+}
+
+var VertcoinParams = Params{
+	Name:        "vtc",
+	DefaultPort: "5889",
+	DNSSeeds: []string{
+	"fr1.vtconline.org",
+        "uk1.vtconline.org",
+        "useast1.vtconline.org",
+        "vtc.alwayshashing.com",
+        "crypto.office-on-the.net",
+        "p2pool.kosmoplovci.org",
+	},
+
+	GenesisBlock:             &simNetGenesisBlock,
+	GenesisHash:              &genesisHash,
+	PowLimit:                 liteCoinTestNet4PowLimit,
+	PowLimitBits:             0x1e0fffff,
+	CoinbaseMaturity:         120,
+	SubsidyReductionInterval: 840000,
+	TargetTimespan:           time.Second * 302400,    // 3.5 weeks
+	TargetTimePerBlock:       time.Second * 150, // 150 seconds
+	RetargetAdjustmentFactor: 4,                 // 25% less, 400% more
+	ReduceMinDifficulty:      false,
+	MinDiffReductionTime:     time.Second * 150 * 2, // ?? unknown
+	GenerateSupported:        false,
+
+	// Checkpoints ordered from oldest to newest.
+	Checkpoints: []Checkpoint{
+    {  0,      newHashFromStr("4d96a915f49d40b1e5c2844d1ee2dccb90013a990ccea12c492d22110489f0c4")},
+    {  24200,  newHashFromStr("d7ed819858011474c8b0cae4ad0b9bdbb745becc4c386bc22d1220cc5a4d1787")},
+    {  65000,  newHashFromStr("9e673a69c35a423f736ab66f9a195d7c42f979847a729c0f3cef2c0b8b9d0289")},
+    {  84065,  newHashFromStr("a904170a5a98109b2909379d9bc03ef97a6b44d5dafbc9084b8699b0cba5aa98")},
+    {  228023, newHashFromStr("15c94667a9e941359d2ee6527e2876db1b5e7510a5ded3885ca02e7e0f516b51")},
+    {  346992, newHashFromStr("f1714fa4c7990f4b3d472eb22132891ccd3c7ad7208e2d1ab15bde68854fb0ee")},
+    {  347269, newHashFromStr("fa1e592b7ea2aa97c5f20ccd7c40f3aaaeb31d1232c978847a79f28f83b6c22a")},
+    {  430000, newHashFromStr("2f5703cf7b6f956b84fd49948cbf49dc164cfcb5a7b55903b1c4f53bc7851611")},
+    {  516999, newHashFromStr("572ed47da461743bcae526542053e7bc532de299345e4f51d77786f2870b7b28")},
+	{  627610, newHashFromStr("6000a787f2d8bb77d4f491a423241a4cc8439d862ca6cec6851aba4c79ccfedc")},
+    },
+
+	BlockEnforceNumRequired: 1512,
+	BlockRejectNumRequired:  1915,
+	BlockUpgradeNumToCheck:  2016,
+
+	// Mempool parameters
+	RelayNonStdTxs: true,
+
+	// Address encoding magics
+	PubKeyHashAddrID:        0x47, // starts with V
+	ScriptHashAddrID:        0x05, // starts with 3
+	Bech32Prefix:           "vtc",
+	PrivateKeyID:            0x80, 
+
+	// BIP32 hierarchical deterministic extended key magics
+	HDPrivateKeyID: [4]byte{0x04, 0x35, 0x83, 0x94}, // starts with tprv
+	HDPublicKeyID:  [4]byte{0x04, 0x35, 0x87, 0xcf}, // starts with tpub
+
+	// BIP44 coin type used in the hierarchical deterministic path for
+	// address generation.
+	HDCoinType: 28,
+}
+
+
 var (
 	// ErrDuplicateNet describes an error where the parameters for a Bitcoin
 	// network could not be set due to the network already being a standard
@@ -696,4 +805,6 @@ func init() {
 	mustRegister(&BC2NetParams)
 	mustRegister(&LiteCoinTestNet4Params)
 	mustRegister(&LiteRegNetParams)
+	mustRegister(&VertcoinTestNetParams)
+	mustRegister(&VertcoinParams)
 }
